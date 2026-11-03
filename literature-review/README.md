@@ -42,5 +42,36 @@ marcadas con ⚠.
 
 ## PDFs
 
-No se guardan PDFs en el repositorio por derechos de autor. Cada referencia enlaza al DOI y,
-cuando existe, a una versión de acceso abierto (PMC, arXiv, repositorio institucional).
+Cada archivo se nombra con el número de su referencia en [referencias.md](referencias.md).
+
+- `papers/`: versión publicada con licencia abierta (CC BY). Está versionada en git.
+- `papers/_local/`: preprint, working paper o PDF de acceso libre **sin** licencia de
+  redistribución. Está excluida de git (`.gitignore`), así que cada miembro del equipo debe
+  descargarla por su cuenta. La versión citable es siempre la del DOI.
+
+| # | Archivo | Carpeta | Versión |
+|---|---|---|---|
+| [1] | 01-sculley-2015.pdf | _local | Actas NeurIPS |
+| [2] | 02-amershi-2019.pdf | _local | PDF de autores (Microsoft Research) |
+| [3] | 03-paleyes-2022.pdf | _local | arXiv v3 (aceptada) |
+| [4] | 04-testi-2022.pdf | _local | arXiv v1 (preprint; la versión publicada es CC BY) |
+| [5] | 05-kreuzberger-2023.pdf | papers | Publicada, CC BY |
+| [7] | 07-webb-2016.pdf | _local | arXiv |
+| [8] | 08-lu-2019.pdf | _local | arXiv |
+| [9] | 09-rabanser-2019.pdf | _local | Actas NeurIPS |
+| [11] | 11-celik-2021.pdf | _local | arXiv |
+| [12] | 12-bayram-2022.pdf | _local | arXiv |
+| [13] | 13-vela-2022.pdf | papers | Publicada, CC BY |
+| [14] | 14-hinder-2024.pdf | papers | Publicada, CC BY |
+| [16] | 16-cerqueira-2020.pdf | _local | arXiv |
+| [17] | 17-chicco-2020.pdf | papers | Publicada, CC BY |
+| [18] | 18-hewamalage-2023.pdf | papers | Publicada, CC BY |
+| [19] | 19-kapoor-2023.pdf | _local | Manuscrito aceptado (NSF PAR) |
+| [22] | 22-fischer-2018.pdf | _local | Working paper FAU 11/2017 |
+| [23] | 23-gu-2020.pdf | _local | Copia de AQR |
+
+**Pendientes de descarga manual** (no hay copia abierta accesible de forma automática):
+[6] Cavalcante (IEEE, paywall) · [10] Gemaque (Wiley bloquea la descarga automática; es
+CC BY, se puede bajar desde el navegador) · [15] Bergmeir (Elsevier; existe working paper de
+Monash 2015-10) · [20] Ballings, [21] Krauss y [24] Bustos (Elsevier, paywall; Krauss tiene
+working paper FAU 03/2016 en EconStor).
