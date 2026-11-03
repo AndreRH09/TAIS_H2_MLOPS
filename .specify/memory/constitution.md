@@ -1,50 +1,83 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Constitución del proyecto TAIS_H2_MLOPS
+
+Estudio experimental: modelo estático frente a modelo operado con MLOps (monitoreo de deriva y
+reentrenamiento) sobre la serie diaria de MSFT.
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Integridad temporal (NO NEGOCIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- Toda partición de datos MUST ser temporal; se prohíbe la partición aleatoria y el barajado
+  entre periodos.
+- Cada feature del instante *t* MUST calcularse solo con información disponible hasta *t*;
+  la etiqueta de *t* (dirección en *t+1*) MUST NOT filtrarse a las features.
+- Escalado, selección de hiperparámetros y referencias de deriva MUST ajustarse solo con datos
+  anteriores a la ventana evaluada.
+- La ausencia de fuga (*leakage*) MUST verificarse con tests automatizados.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Razón:** con series temporales, la fuga de información infla las métricas e invalida la
+comparación entre grupos.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Reproducibilidad
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- Dependencias MUST fijarse en `pyproject.toml` + `uv.lock`.
+- Toda fuente de aleatoriedad MUST usar una semilla fija y registrada.
+- El dataset de entrada MUST versionarse (archivo + hash) y su procedencia documentarse.
+- Todo run (entrenamiento, predicción por ventana, reentrenamiento) MUST registrarse en MLflow
+  con parámetros, métricas, semilla y versión de datos.
+- Ejecutar el experimento dos veces con la misma configuración MUST producir métricas idénticas.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Razón:** un resultado experimental que no puede repetirse no puede evaluarse.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Comparabilidad entre grupos A y B
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- Grupo A (control) y grupo B (tratamiento) MUST compartir algoritmo, hiperparámetros iniciales,
+  features, ventanas de prueba y métricas.
+- La única diferencia permitida MUST ser la política de reentrenamiento del grupo B.
+- Umbrales de deriva y de F1, y la ventana de reentrenamiento, MUST fijarse antes de ver los
+  resultados de prueba y documentarse en la especificación.
+- Las métricas (Precision, Recall, F1) MUST reportarse por ventana para ambos grupos, junto con
+  el número de reentrenamientos de B.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Razón:** el efecto medido debe atribuirse a la operación MLOps y no a otra variable.
+
+### IV. Evidencia verificada y simplicidad
+
+- Cada decisión de diseño experimental (partición, baseline, disparador de reentrenamiento,
+  métricas) MUST respaldarse en al menos una fuente revisada por pares, citada en formato IEEE.
+- Cada referencia MUST verificarse por DOI o fuente editorial; se prohíben citas no verificadas.
+- Las referencias MUST mantenerse legibles en el repositorio (Markdown).
+- Herramientas de producción a escala (Kubernetes, Kafka, Feast, Prometheus/Grafana, Kubeflow)
+  MUST NOT incorporarse salvo justificación documentada ligada al objetivo del experimento.
+
+**Razón:** el estudio contrasta su diseño con la literatura; la complejidad sin propósito
+añade riesgo sin aportar validez.
+
+## Restricciones técnicas
+
+- Lenguaje: Python, entorno gestionado con `uv`.
+- Modelado y métricas: scikit-learn.
+- Detección de deriva: Evidently.
+- Seguimiento y registro de modelos: MLflow con backend SQLite local.
+- Datos: archivos CSV/Parquet versionados; sin servidor de base de datos.
+- Orquestación: script Python que ejecuta el bucle walk-forward y decide el reentrenamiento.
+- Integración continua: GitHub Actions con lint (ruff) y tests (pytest).
+
+## Flujo de trabajo y calidad
+
+- Todo trabajo MUST realizarse en una rama dedicada (`chore/…`, `docs/…` o rama de feature de
+  Spec Kit `NNN-…`); `main` MUST NOT recibir commits directos.
+- Cada cambio MUST seguir el flujo Spec Kit: constitución → especificación → plan → tareas →
+  implementación.
+- CI MUST pasar (ruff + pytest) antes de integrar una rama.
+- Documentación del proyecto en español; términos técnicos en inglés.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- Esta constitución prevalece sobre cualquier otra práctica del repositorio.
+- Las enmiendas MUST documentarse en este archivo, con justificación y aumento de versión.
+- Versionado semántico: MAJOR para eliminar o redefinir principios; MINOR para añadir principios
+  o secciones; PATCH para aclaraciones de redacción.
+- Cada especificación y plan MUST incluir una verificación de cumplimiento de estos principios.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-11-03 | **Last Amended**: 2026-11-03
