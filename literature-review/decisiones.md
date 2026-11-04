@@ -11,7 +11,7 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 | D3 | Clasificador: LR, RF o ambos | ? |
 | D4 | Baselines ingenuos de referencia | ? |
 | D5 | Reentrenar si hay deriva **o** cae el F1 | ✔ |
-| D6 | Reentrenar con el último año (ventana deslizante) | ◐ |
+| D6 | Reentrenar con el último año (ventana deslizante) | ✔ ([13] p. 3, ver [evidencia-clave.md](evidencia-clave.md)) |
 | D7 | Métricas Precision, Recall y F1 | ◐ |
 
 ---
