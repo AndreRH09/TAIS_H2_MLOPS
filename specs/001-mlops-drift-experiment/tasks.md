@@ -101,7 +101,7 @@ tiene referencia IEEE con DOI que resuelve y una fila en la matriz o una decisi�
 - [x] T031 [US2] Matriz de contraste en `literature-review/matriz-contraste.md`
 - [x] T032 [US2] Citas textuales de los 4 papers más cercanos en `literature-review/evidencia-clave.md` y guías de lectura en `literature-review/lecturas/`
 - [ ] T033 [US2] Integrar en `literature-review/matriz-contraste.md` y `literature-review/decisiones.md` los entregables de lectura de Andre, Frank, Willy y Paul, y resolver las celdas marcadas con ⚠ con la página exacta del PDF
-- [ ] T034 [P] [US2] Añadir a `literature-review/decisiones.md` las decisiones técnicas que necesitan respaldo y que surgieron en el plan (purga de 1 día, hiperparámetros congelados, σ por bootstrap) con su fuente, o marcarlas como "decisión propia" si no la hay
+- [x] T034 [P] [US2] Añadir a `literature-review/decisiones.md` el respaldo de las decisiones técnicas del plan: D8 purga ([15] p. 2, [16] p. 4 y 6), D9 hiperparámetros congelados ([11] p. 4, con el contraejemplo [23] p. 27), D10 σ por bootstrap ([25] p. 4 y 6) y D2 ventanas ([22] p. 6, [23] p. 27)
 
 **Checkpoint**: US2 completa. Cada parámetro de `experiment.toml` remite a una fuente (SC-006).
 

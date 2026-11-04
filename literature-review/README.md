@@ -8,8 +8,8 @@ exigido por el Principio IV de la [constitución](../.specify/memory/constitutio
 
 | Archivo | Qué contiene |
 |---|---|
-| [referencias.md](referencias.md) | 24 fuentes revisadas por pares en formato IEEE, anotadas, con DOI o fuente editorial |
-| [decisiones.md](decisiones.md) | Cada decisión del diseño (D1–D7) con las fuentes que la respaldan o la cuestionan |
+| [referencias.md](referencias.md) | 25 fuentes revisadas por pares en formato IEEE, anotadas, con DOI o fuente editorial |
+| [decisiones.md](decisiones.md) | Cada decisión del diseño (D1–D10) con las fuentes que la respaldan o la cuestionan |
 | [matriz-contraste.md](matriz-contraste.md) | Comparación del diseño propio con los estudios empíricos |
 | [evidencia-clave.md](evidencia-clave.md) | Citas textuales con página de los 4 papers más cercanos ([5], [6], [12], [13]), para subrayar |
 | [lecturas/](lecturas/) | Reparto de los 4 papers (Andre, Frank, Willy, Paul): guía de lectura, qué es clave y qué reutilizar o adaptar |
@@ -77,5 +77,6 @@ Cada archivo se nombra con el número de su referencia en [referencias.md](refer
 | [22] | 22-fischer-2018.pdf | _local | Working paper FAU 11/2017 |
 | [23] | 23-gu-2020.pdf | _local | Copia de AQR |
 | [24] | 24-bustos-2020.pdf | _local | Publicada (Elsevier, acceso institucional) |
+| [25] | 25-dror-2018.pdf | papers | Publicada, ACL Anthology (CC BY 4.0) |
 
-Las 24 fuentes tienen PDF: 6 versionados en `papers/` y 18 locales en `_local/`.
+Las 25 fuentes tienen PDF: 7 versionados en `papers/` y 18 locales en `_local/`.

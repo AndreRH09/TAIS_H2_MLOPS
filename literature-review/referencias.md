@@ -7,7 +7,7 @@ Leyenda de ejes: **A** MLOps · **B** deriva y reentrenamiento · **C** evaluaci
 |---|---|---|---|
 | [1]–[5] | A | resumen | Marco general (D5, D6) |
 | [6]–[14] | B | resumen | D5, D6 |
-| [15]–[19] | C | resumen | D1, D2, D4, D7 |
+| [15]–[19], [25] | C | resumen; [15], [16], [25] completa en las secciones citadas | D1, D2, D4, D7, D8, D10 |
 | [20]–[24] | D | resumen | D1, D3, D4 |
 
 ## A. MLOps general
@@ -124,6 +124,15 @@ scientists: Common pitfalls and best practices," *Data Min. Knowl. Discov.*, vol
 pp. 788–832, 2023, doi: [10.1007/s10618-022-00894-5](https://doi.org/10.1007/s10618-022-00894-5).
 > Errores de evaluación (partición, métricas, tests) que hacen parecer competitivos a métodos
 > que no lo son.
+
+**[25]** R. Dror, G. Baumer, S. Shlomov, and R. Reichart, "The hitchhiker's guide to testing
+statistical significance in natural language processing," in *Proc. 56th Annu. Meeting Assoc.
+Comput. Linguistics (ACL)*, 2018, pp. 1383–1392,
+doi: [10.18653/v1/P18-1128](https://doi.org/10.18653/v1/P18-1128).
+> Guía para elegir tests de significancia. El F-score no se distribuye normalmente, así que
+> corresponden tests no paramétricos; el bootstrap aproxima la distribución muestral de la
+> métrica y es la opción recomendada con pocos datos, aunque pierde efectividad con conjuntos
+> de prueba pequeños.
 
 **[19]** S. Kapoor and A. Narayanan, "Leakage and the reproducibility crisis in
 machine-learning-based science," *Patterns*, vol. 4, no. 9, Art. no. 100804, 2023,
