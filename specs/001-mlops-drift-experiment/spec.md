@@ -135,8 +135,9 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
 
 **Modelo**
 
-- **FR-010**: Ambos grupos MUST usar el mismo clasificador simple: [NEEDS CLARIFICATION:
-  ¿regresión logística, Random Forest, o ambos como dos réplicas del experimento?].
+- **FR-010**: El experimento MUST ejecutarse en dos réplicas independientes, una con regresión
+  logística y otra con Random Forest. Dentro de cada réplica, todos los grupos usan el mismo
+  clasificador (respaldo: [13], [20], [22], [23] en `literature-review/`).
 - **FR-011**: El grupo A MUST mantener el modelo inicial sin cambios durante toda la prueba.
 
 **Monitoreo y reentrenamiento (grupo B)**
@@ -154,9 +155,10 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
 
 **Referencias de comparación**
 
-- **FR-017**: Además de A y B, el sistema MUST reportar [NEEDS CLARIFICATION: ¿baselines
-  ingenuos de referencia (siempre "sube", persistencia del día anterior, aleatorio
-  estratificado) o solo la comparación A vs. B?].
+- **FR-017**: Además de los grupos experimentales, el sistema MUST reportar, por ventana y con
+  las mismas métricas, tres baselines ingenuos: siempre "sube", persistencia de la dirección
+  del día anterior y aleatorio estratificado según la proporción de clases del entrenamiento
+  (respaldo: [18], [22]).
 
 **Registro y reporte**
 
