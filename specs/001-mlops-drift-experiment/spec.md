@@ -280,4 +280,8 @@ reentrenamientos.
 - El experimento es una simulación por lotes sobre datos históricos; no hay despliegue en
   producción ni datos en tiempo real.
 - La fuente externa de validación de precios es de acceso público.
-- El dataset de Kaggle se usa bajo licencia Apache 2.0.
+- El dataset de Kaggle (ashrafkhetran/microsoft-stock-price-analysis-and-forecasting) se usa
+  bajo licencia CC BY 4.0, con atribución. El diseño original indicaba Apache 2.0, pero la
+  página del dataset dice CC BY 4.0. Está versionado en `data/raw/` con su SHA-256.
+- Los precios del dataset están ajustados por dividendos; la validación externa se hace contra
+  el cierre ajustado.
