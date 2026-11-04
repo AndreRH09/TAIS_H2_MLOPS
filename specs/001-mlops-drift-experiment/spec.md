@@ -17,29 +17,41 @@ Actor principal: **investigador** (estudiante del curso) que ejecuta el experime
 reporta conclusiones. Actor secundario: **evaluador** (docente) que revisa validez y
 reproducibilidad.
 
-### User Story 1 - Ejecutar el experimento walk-forward A vs. B (Priority: P1)
+### User Story 1 - Ejecutar el experimento walk-forward A vs. B vs. C (Priority: P1)
 
 El investigador ejecuta, con un solo comando, la simulación completa sobre el periodo de
-prueba. En cada ventana, el grupo A (modelo estático entrenado con datos iniciales) y el
-grupo B (modelo vigente, que se reentrena cuando se detecta deriva o caída de desempeño)
-predicen la dirección del precio, y sus métricas quedan registradas por ventana.
+prueba. En cada ventana predicen la dirección del precio tres grupos, y sus métricas quedan
+registradas por ventana:
+
+- **Grupo A (control, sin MLOps):** modelo entrenado una vez con los datos iniciales y nunca
+  actualizado.
+- **Grupo B (MLOps por monitoreo):** modelo vigente que se reentrena solo cuando se detecta
+  deriva o caída de desempeño.
+- **Grupo C (MLOps periódico):** modelo que se reentrena al cierre de cada ventana sin mirar
+  deriva ni desempeño.
+
+Comparar B con C separa el efecto del **monitoreo** del efecto de **reentrenar**
+(respaldo: [5] p. 11, [6] p. 6–7 en `literature-review/`).
 
 **Why this priority**: es el núcleo del estudio; sin él no hay resultado que analizar.
 
 **Independent Test**: ejecutar el experimento sobre el dataset y comprobar que existen
-métricas por ventana para ambos grupos y un registro de cada reentrenamiento de B.
+métricas por ventana para los tres grupos y un registro de cada reentrenamiento de B y C.
 
 **Acceptance Scenarios**:
 
 1. **Given** el dataset validado y la configuración fijada, **When** el investigador ejecuta
-   el experimento, **Then** se obtienen Precision, Recall y F1 por ventana para A y para B.
+   el experimento, **Then** se obtienen Precision, Recall y F1 por ventana para A, B y C.
 2. **Given** una ventana cerrada en la que se detecta deriva o el F1 de B cae bajo el umbral,
    **When** el sistema evalúa la ventana, **Then** B se reentrena con los datos del último año
    disponible, se registra como nueva versión y se usa desde la ventana siguiente (nunca en
    la ventana que disparó el reentrenamiento).
 3. **Given** una ventana sin deriva ni caída de F1, **When** se cierra, **Then** B conserva su
    versión vigente y no se registra reentrenamiento.
-4. **Given** la misma configuración y semilla, **When** el experimento se ejecuta dos veces,
+4. **Given** cualquier ventana cerrada, **When** el sistema la evalúa, **Then** C se reentrena
+   con los datos del último año disponible, independientemente de la deriva y del F1, y la
+   nueva versión se usa desde la ventana siguiente.
+5. **Given** la misma configuración y semilla, **When** el experimento se ejecuta dos veces,
    **Then** las métricas resultantes son idénticas.
 
 ---
@@ -72,20 +84,24 @@ referencia IEEE completa con DOI verificable y una fila en la matriz de contrast
 
 ### User Story 3 - Analizar y reportar la comparación (Priority: P3)
 
-El investigador obtiene un resumen comparativo: evolución temporal de las métricas de A y B,
-diferencia por ventana, número y momento de los reentrenamientos y las amenazas a la validez.
+El investigador obtiene un resumen comparativo: evolución temporal de las métricas de A, B, C
+y los baselines ingenuos, diferencias por ventana (B−A, C−A, B−C), número y momento de los
+reentrenamientos de B y C, y las amenazas a la validez.
 
 **Why this priority**: convierte los resultados en conclusiones evaluables; depende de US1.
 
 **Independent Test**: a partir de las métricas registradas, generar el resumen y verificar
-que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamientos.
+que incluye la serie temporal de F1 de los tres grupos y los baselines, y la lista de
+reentrenamientos.
 
 **Acceptance Scenarios**:
 
 1. **Given** las métricas por ventana, **When** se genera el resumen, **Then** muestra la
-   evolución de Precision, Recall y F1 de A y B sobre todas las ventanas.
+   evolución de Precision, Recall y F1 de A, B, C y los baselines sobre todas las ventanas,
+   por réplica.
 2. **Given** el resumen, **When** el evaluador lo revisa, **Then** encuentra el número de
-   reentrenamientos de B, las ventanas en que ocurrieron y el motivo (deriva o caída de F1).
+   reentrenamientos de B y de C, las ventanas en que ocurrieron y el motivo (deriva, caída de
+   F1 o periódico).
 
 ---
 
@@ -139,6 +155,9 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
   logística y otra con Random Forest. Dentro de cada réplica, todos los grupos usan el mismo
   clasificador (respaldo: [13], [20], [22], [23] en `literature-review/`).
 - **FR-011**: El grupo A MUST mantener el modelo inicial sin cambios durante toda la prueba.
+- **FR-011a**: El grupo C MUST reentrenarse al cierre de cada ventana con los datos del último
+  año, usando el mismo procedimiento de reentrenamiento que B, sin evaluar deriva ni F1 como
+  condición.
 
 **Monitoreo y reentrenamiento (grupo B)**
 
@@ -179,9 +198,9 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
 - **Observación diaria**: fecha, precios OHLC, volumen, variación; base de features y
   etiqueta.
 - **Ventana de prueba**: periodo consecutivo (inicio, fin, número de registros) en el que se
-  evalúan ambos grupos.
-- **Versión de modelo**: grupo, número de versión, periodo de entrenamiento, fecha de
-  creación, motivo (inicial / deriva / caída de F1).
+  evalúan todos los grupos.
+- **Versión de modelo**: réplica (LR o RF), grupo, número de versión, periodo de
+  entrenamiento, fecha de creación, motivo (inicial / deriva / caída de F1 / periódico).
 - **Evaluación de ventana**: ventana × grupo × versión → Precision, Recall, F1, resultado de
   deriva.
 - **Fuente bibliográfica**: referencia IEEE, DOI, área temática y valores en la matriz de
@@ -193,7 +212,8 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
 
 - **SC-001**: El experimento completo se ejecuta de principio a fin con un solo comando, sin
   pasos manuales intermedios.
-- **SC-002**: El 100 % de las ventanas de prueba tiene métricas registradas para ambos grupos.
+- **SC-002**: El 100 % de las ventanas de prueba tiene métricas registradas para los tres
+  grupos y los tres baselines, en ambas réplicas.
 - **SC-003**: Dos ejecuciones con la misma configuración producen métricas idénticas (diferencia
   0 en todas las ventanas).
 - **SC-004**: El 100 % de las features pasa la verificación automática de ausencia de fuga de
@@ -207,7 +227,7 @@ que incluye la serie temporal de F1 de ambos grupos y la lista de reentrenamient
 
 ## Assumptions
 
-- El interés está en la **diferencia** entre A y B, no en el valor absoluto de las métricas;
+- El interés está en las **diferencias** entre A, B y C, no en el valor absoluto de las métricas;
   se esperan métricas bajas dada la dificultad de predecir la dirección diaria.
 - La partición propuesta (entrenamiento feb–sep 2021, validación oct–dic 2021) es
   **provisional**: se revisará con la matriz de contraste antes de la ejecución final. El

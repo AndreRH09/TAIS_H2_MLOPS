@@ -29,15 +29,16 @@ comparación entre grupos.
 
 **Razón:** un resultado experimental que no puede repetirse no puede evaluarse.
 
-### III. Comparabilidad entre grupos A y B
+### III. Comparabilidad entre grupos experimentales
 
-- Grupo A (control) y grupo B (tratamiento) MUST compartir algoritmo, hiperparámetros iniciales,
-  features, ventanas de prueba y métricas.
-- La única diferencia permitida MUST ser la política de reentrenamiento del grupo B.
+- Los grupos A (control, sin reentrenamiento), B (reentrenamiento por monitoreo) y C
+  (reentrenamiento periódico) MUST compartir, dentro de cada réplica, algoritmo,
+  hiperparámetros iniciales, features, ventanas de prueba y métricas.
+- La única diferencia permitida entre grupos MUST ser la política de reentrenamiento.
 - Umbrales de deriva y de F1, y la ventana de reentrenamiento, MUST fijarse antes de ver los
   resultados de prueba y documentarse en la especificación.
-- Las métricas (Precision, Recall, F1) MUST reportarse por ventana para ambos grupos, junto con
-  el número de reentrenamientos de B.
+- Las métricas (Precision, Recall, F1) MUST reportarse por ventana para todos los grupos, junto
+  con el número de reentrenamientos de B y C.
 
 **Razón:** el efecto medido debe atribuirse a la operación MLOps y no a otra variable.
 
@@ -80,4 +81,4 @@ añade riesgo sin aportar validez.
   o secciones; PATCH para aclaraciones de redacción.
 - Cada especificación y plan MUST incluir una verificación de cumplimiento de estos principios.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-03 | **Last Amended**: 2026-11-03
+**Version**: 1.1.0 | **Ratified**: 2026-11-03 | **Last Amended**: 2026-11-03
