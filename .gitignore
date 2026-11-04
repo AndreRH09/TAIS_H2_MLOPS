@@ -6,6 +6,9 @@
 __pycache__/
 *.pyc
 
+# Papers sin licencia abierta (solo copia local, no redistribuir)
+literature-review/papers/_local/
+
 # MLflow local artifacts
 mlruns/
 mlartifacts/
