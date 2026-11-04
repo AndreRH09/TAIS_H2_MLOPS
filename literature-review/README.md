@@ -12,6 +12,7 @@ exigido por el Principio IV de la [constitución](../.specify/memory/constitutio
 | [decisiones.md](decisiones.md) | Cada decisión del diseño (D1–D7) con las fuentes que la respaldan o la cuestionan |
 | [matriz-contraste.md](matriz-contraste.md) | Comparación del diseño propio con los estudios empíricos |
 | [evidencia-clave.md](evidencia-clave.md) | Citas textuales con página de los 4 papers más cercanos ([5], [6], [12], [13]), para subrayar |
+| [lecturas/](lecturas/) | Reparto de los 4 papers (Andre, Frank, Willy, Paul): guía de lectura, qué es clave y qué reutilizar o adaptar |
 
 ## Criterios de inclusión
 
