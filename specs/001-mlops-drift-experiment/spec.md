@@ -11,6 +11,23 @@
 (feb 2021 – feb 2026), clasificación de la dirección del precio al día siguiente, evaluación
 walk-forward por ventanas, contraste del diseño con la literatura revisada por pares."
 
+## Clarifications
+
+### Session 2026-11-03
+
+- Q: Tras ajustar hiperparámetros con la validación, ¿el modelo inicial se reentrena con todo
+  2021 o solo con feb–sep? → A: Se reentrena con todo 2021 (feb–dic) usando los
+  hiperparámetros elegidos.
+- Q: ¿Qué regla decide que el F1 de B en una ventana bajó lo suficiente para reentrenar? →
+  A: Umbral estadístico, `F1_ventana < F1_referencia − 2σ` (σ por bootstrap del hold-out
+  temporal, 95 %).
+- Q: ¿Qué regla decide que las features de una ventana derivaron respecto a la referencia? →
+  A: KS por feature + Bonferroni, deriva si `min(p) < 0,05 / K`.
+- Q: ¿Qué se hace con el tramo final incompleto (01-01-2026 a 02-02-2026)? → A: Se excluye de
+  métricas, disparadores y comparaciones; se documenta su tamaño.
+- Q: ¿Cómo se decide si un grupo es mejor que otro? → A: Descriptivo + Wilcoxon de rangos con
+  signo pareado sobre las 8 ventanas (B vs. A, C vs. A, B vs. C; α = 0,05).
+
 ## User Scenarios & Testing *(mandatory)*
 
 Actor principal: **investigador** (estudiante del curso) que ejecuta el experimento y
@@ -109,8 +126,8 @@ reentrenamientos.
 
 - Ventana con una sola clase en las etiquetas reales (solo subidas o solo bajadas): las
   métricas indefinidas MUST registrarse explícitamente como tales, no como cero silencioso.
-- Ventana incompleta al final del periodo (2026-Q1 con pocos días): MUST indicarse su tamaño
-  y excluirse o reportarse aparte según regla fijada antes de la ejecución.
+- Tramo incompleto al final (01-01-2026 a 02-02-2026, ≈ 22 días hábiles): MUST excluirse de
+  las métricas, los disparadores y las comparaciones; su tamaño se documenta en el reporte.
 - Días sin cotización o registros faltantes/duplicados: MUST detectarse en la validación de
   datos antes de construir features.
 - Discrepancias entre el dataset de Kaggle y la fuente externa de validación: MUST
@@ -140,14 +157,22 @@ reentrenamientos.
   rezagados, medias móviles y volumen.
 - **FR-006**: El sistema MUST verificar automáticamente que ninguna feature use información
   posterior al instante de predicción.
+- **FR-006a**: Las features MUST ser relativas o adimensionales (rendimientos, precio relativo a
+  su media móvil, volumen relativo a su media), no niveles absolutos de precio o volumen. Con
+  niveles, la tendencia del activo (≈ USD 240 → 500) haría que el test de deriva se dispare en
+  todas las ventanas.
 
 **Partición y evaluación**
 
 - **FR-007**: La partición MUST ser temporal: entrenamiento y validación con datos de 2021,
-  prueba desde 2022-Q1 hasta 2026-Q1 en ventanas consecutivas.
-- **FR-008**: El tamaño de ventana de prueba MUST ser semestral (≈ 8 ventanas de ≈ 126
-  registros cada una), para reducir el ruido de las métricas por ventana.
-- **FR-009**: Los hiperparámetros MUST ajustarse solo con el periodo de validación.
+  prueba desde 2022-H1 hasta 2025-H2 en ventanas consecutivas.
+- **FR-008**: El tamaño de ventana de prueba MUST ser semestral: 8 ventanas completas
+  (2022-H1 … 2025-H2) de ≈ 126 registros cada una, para reducir el ruido de las métricas por
+  ventana.
+- **FR-009**: Los hiperparámetros MUST ajustarse entrenando con feb–sep 2021 y evaluando en
+  oct–dic 2021. Con los hiperparámetros elegidos, el modelo inicial de todos los grupos MUST
+  reentrenarse con todo 2021 (feb–dic). Ningún dato de 2022 en adelante interviene en estos
+  pasos.
 
 **Modelo**
 
@@ -163,8 +188,17 @@ reentrenamientos.
 
 - **FR-012**: Al cerrar cada ventana, el sistema MUST comparar la distribución de las
   features de la ventana con la de referencia y reportar si hay deriva del conjunto.
+- **FR-012a**: La regla de deriva MUST ser: test de Kolmogorov-Smirnov por feature y
+  corrección de Bonferroni; hay deriva si `min(p) < 0,05 / K`, con K = número de features
+  (respaldo: [9] p. 4 y p. 6). Se registran el p-valor de cada feature y la decisión final.
 - **FR-013**: El sistema MUST disparar reentrenamiento de B cuando se detecte deriva o el F1
   de B en la ventana caiga bajo un umbral.
+- **FR-013a**: El umbral de F1 MUST ser estadístico: al entrenar cada versión se estiman su F1
+  de referencia y su desviación estándar σ por bootstrap sobre un hold-out temporal (tramo
+  final de su periodo de entrenamiento), con remuestras del tamaño de una ventana. La ventana
+  dispara reentrenamiento si `F1_ventana < F1_referencia − 2σ` (nivel de alerta de DDM, 95 %;
+  respaldo: [6] p. 3 y p. 6, [12] p. 19). Cada nueva versión recalcula su propia referencia y
+  su umbral.
 - **FR-014**: El umbral de deriva, el umbral de F1 y la ventana de reentrenamiento (último año)
   MUST fijarse y documentarse antes de ejecutar la prueba, con justificación en la literatura.
 - **FR-015**: Cada reentrenamiento MUST registrar una nueva versión del modelo con fecha,
@@ -184,6 +218,10 @@ reentrenamientos.
 - **FR-018**: El sistema MUST registrar por ventana y grupo: Precision, Recall, F1, tamaño de
   ventana, versión de modelo usada y resultado de la evaluación de deriva.
 - **FR-019**: El sistema MUST generar un resumen comparativo según US3.
+- **FR-019a**: La comparación entre grupos MUST hacerse, en cada réplica, para B vs. A, C vs. A
+  y B vs. C sobre el F1 de las 8 ventanas, reportando: diferencia media, número de ventanas
+  ganadas y test de Wilcoxon de rangos con signo pareado por ventana (α = 0,05; respaldo: [6]
+  p. 5). La baja potencia del test con n = 8 MUST declararse como amenaza a la validez.
 
 **Literatura**
 
@@ -224,14 +262,18 @@ reentrenamientos.
   baseline) se vincula con al menos una fuente de la matriz de contraste.
 - **SC-007**: Un evaluador puede reproducir los resultados a partir del repositorio en menos de
   30 minutos siguiendo la documentación.
+- **SC-008**: El criterio de comparación (FR-019a) y todos los umbrales (FR-012a, FR-013a)
+  quedan fijados en la especificación antes de la primera ejecución sobre el periodo de prueba,
+  lo que se verifica con el historial de git.
 
 ## Assumptions
 
 - El interés está en las **diferencias** entre A, B y C, no en el valor absoluto de las métricas;
   se esperan métricas bajas dada la dificultad de predecir la dirección diaria.
-- La partición propuesta (entrenamiento feb–sep 2021, validación oct–dic 2021) es
-  **provisional**: se revisará con la matriz de contraste antes de la ejecución final. El
-  periodo de entrenamiento inicial tiene ≈ 160 registros, y el "80/20" se refiere solo a 2021.
+- La partición de 2021 (feb–sep para ajuste, oct–dic para validación) solo se usa para elegir
+  hiperparámetros. El modelo inicial se entrena con todo 2021 (≈ 230 registros), un tamaño
+  comparable al de los reentrenamientos de B y C con un año (≈ 252), lo que evita que la
+  diferencia entre grupos se deba al volumen de datos.
 - La clase positiva para Precision/Recall/F1 es "sube".
 - Un solo activo y un solo tipo de modelo limitan la generalización; se documenta como amenaza
   a la validez.

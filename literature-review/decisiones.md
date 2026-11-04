@@ -98,8 +98,16 @@ la ventana cae bajo un umbral.
 - [8] Marco detección → comprensión → adaptación.
 - [1], [4], [5] Monitoreo y entrenamiento continuo como componentes de MLOps.
 
-**Pendiente:** fijar los umbrales (deriva, F1) antes de ejecutar la prueba (Principio III).
-⚠ Hay que revisar en [12] los valores de umbral habituales.
+**Umbral de F1 (decidido en clarify 2026-11-03):** `F1_ventana < F1_referencia − 2σ`.
+Ningún paper revisado respalda un porcentaje fijo (como 20 %). La literatura usa umbrales
+estadísticos: DDM avisa a 2σ (95 %) y declara deriva a 3σ (99 %) [6] p. 3, y en series
+financieras el mejor nivel de deriva fue 2σ [6] p. 6; la familia DDM es la base de los
+detectores por desempeño [12] p. 19.
+**Umbral de deriva (decidido en clarify 2026-11-03):** KS por feature + corrección de
+Bonferroni, deriva si `min(p) < 0,05 / K`. Respaldo textual: [9] p. 4 describe el método y
+p. 6 fija α = 0,05; los tests univariados agregados rinden *"comparable"* a los multivariados.
+⚠ KS supone muestras independientes, y las features derivadas de ventanas móviles están
+autocorrelacionadas. Se declara como amenaza a la validez.
 
 ---
 
