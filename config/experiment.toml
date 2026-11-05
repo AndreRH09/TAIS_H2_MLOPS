@@ -1,0 +1,51 @@
+# Configuración del experimento. SE FIJA (commit) ANTES de la primera ejecución sobre 2022+ (SC-008).
+# Cada parámetro se respalda en literature-review/decisiones.md (D1-D7).
+
+[data]
+path = "data/raw/MSFT_5years_cleaned.csv"
+sha256 = "1617484d95f94f5968c176246decee0680c39cdb7733b503d73bda03eafe86f7"
+
+[run]
+seed = 42                      # única fuente de aleatoriedad (Principio II)
+replicas = ["logreg", "rf"]    # D3: LR y RF como dos réplicas ([13], [20], [22], [23])
+
+[split]                        # D1, D2: partición temporal, ventanas semestrales ([15], [16], [18])
+fit_start = "2021-01-01"
+fit_end = "2021-09-30"         # ajuste de hiperparámetros: feb-sep 2021
+val_start = "2021-10-01"
+val_end = "2021-12-31"         # validación: oct-dic 2021
+test_start = "2022-01-01"
+test_end = "2025-12-31"        # 8 ventanas semestrales 2022-H1 ... 2025-H2
+# El tramo posterior a test_end (2026-01-01 a 2026-02-02) se excluye y se reporta.
+
+[features]
+n_lags = 4                     # ret_1 ... ret_4 (además de ret_0)
+ma_windows = [5, 10, 20]
+vol_ma_window = 20
+
+[models.logreg]
+C = [0.01, 0.1, 1.0, 10.0]
+
+[models.rf]
+n_estimators = [100, 300]
+max_depth = [3, 5, 10]
+min_samples_leaf = [5, 20]
+
+[drift]                        # FR-012a ([9] p. 4 y 6)
+alpha = 0.05
+test = "ks"
+correction = "bonferroni"      # umbral por feature = alpha / K
+
+[f1_trigger]                   # FR-013a ([6] p. 3 y 6, [12] p. 19)
+k_sigma = 2.0                  # F1_ventana < F1_ref - 2 sigma
+holdout_rows = 63              # tramo final del entrenamiento (~1 trimestre)
+n_bootstrap = 1000
+resample_size = 126            # tamaño de una ventana
+
+[retrain]                      # D6 ([13] p. 3, [5] p. 11, [6] p. 6-7)
+window_rows = 252              # último año
+
+[validation]                   # FR-002: tolerancias de la validación externa
+ticker = "MSFT"
+price_rel_tol = 0.005
+volume_rel_tol = 0.05

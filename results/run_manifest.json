@@ -1,0 +1,18 @@
+{
+  "csv_sha256": {
+    "drift_details.csv": "eaa87cf0f921f0e3cb93f3b00eb094b5fd68d525c61312300ed0e40d6ac63c41",
+    "model_versions.csv": "cf0a3eb169df43127e4bfdfd153767e82462c657af50f5401331b21055a5f8e4",
+    "window_metrics.csv": "045cdda03d3daa4a7493fec3b4472d27003ebbfa3895875a486fbcafd0937917"
+  },
+  "data_sha256": "1617484d95f94f5968c176246decee0680c39cdb7733b503d73bda03eafe86f7",
+  "libraries": {
+    "evidently": "0.7.23",
+    "mlflow": "3.18.0",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  },
+  "python": "3.12.10",
+  "seed": 42
+}
