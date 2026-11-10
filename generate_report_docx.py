@@ -599,6 +599,49 @@ def create_report():
         "y especificidad de un único activo de gran capitalización tecnológica (MSFT)."
     )
 
+    add_heading_2(doc, "5.6. Evaluación y Verificación Específica del Tramo Reciente (Julio 2025 – Enero 2026)")
+    p = add_para(doc)
+    p.add_run(
+        "Para responder a la pregunta de si los modelos reentrenados se acercan más a la realidad en la etapa más reciente del dataset, "
+        "se evaluó de forma independiente el tramo comprendido entre el 1 de julio de 2025 y el 30 de enero de 2026 (148 días bursátiles, 50.7% de subidas reales), "
+        "comparando el modelo original congelado en 2021 frente al modelo reentrenado con la ventana del último año (julio 2024 a junio 2025, 252 días):\n"
+    )
+
+    t_rec = doc.add_table(rows=8, cols=6)
+    t_rec_headers = ["Réplica", "Modelo / Configuración", "Periodo Entrenamiento", "F1", "Precision", "Recall"]
+    t_rec_w = [1.0, 1.8, 1.6, 0.7, 0.7, 0.7]
+    t_rec_data = [
+        ["baseline", "Siempre Sube", "Heurística (dummy)", "0.673", "0.507", "1.000"],
+        ["baseline", "Persistencia", "Heurística (signo ret_0)", "0.493", "0.493", "0.493"],
+        ["baseline", "Estratificado", "Proporción 2021 (0.521)", "0.487", "0.469", "0.507"],
+        ["logreg", "Grupo A (Estático)", "2021 (2021-03 a 2021-12)", "0.558", "0.495", "0.640"],
+        ["logreg", "Grupo B/C (Reentrenado)", "Último año (2024-06 a 2025-06)", "0.650", "0.516", "0.880"],
+        ["rf", "Grupo A (Estático)", "2021 (2021-03 a 2021-12)", "0.419", "0.425", "0.413"],
+        ["rf", "Grupo B/C (Reentrenado)", "Último año (2024-06 a 2025-06)", "0.583", "0.510", "0.680"]
+    ]
+    for j, h in enumerate(t_rec_headers):
+        cell = t_rec.rows[0].cells[j]
+        cell.text = h
+        style_run(cell.paragraphs[0].runs[0], size_pt=8.5, bold=True, color=RGBColor(255, 255, 255))
+        set_cell_props(cell, fill_hex="1B365D", top=60, bottom=60, left=60, right=60)
+    for i, row in enumerate(t_rec_data):
+        for j, val in enumerate(row):
+            cell = t_rec.rows[i+1].cells[j]
+            cell.text = val
+            fill = "F8F9FA" if i % 2 == 1 else "FFFFFF"
+            bold = ("Reentrenado" in val) or (j == 3 and "0.650" in val)
+            style_run(cell.paragraphs[0].runs[0], size_pt=8.5, bold=bold, color=TEXT_COLOR)
+            set_cell_props(cell, fill_hex=fill, top=50, bottom=50, left=60, right=60)
+    format_table(t_rec, t_rec_w, align_center)
+
+    add_para(doc, space_after=8)
+    p = add_para(doc)
+    p.add_run(
+        "Conclusión clave del tramo reciente: A diferencia de los primeros años (2022-2023) donde el reentrenamiento sufrió sobreajuste al ruido, "
+        "en este tramo final el modelo reentrenado con el último año superó con amplitud al modelo estático en ambas réplicas (+9.2 puntos de F1 en Regresión Logística y +16.4 puntos en Random Forest). "
+        "El modelo que más se acercó a la realidad fue la Regresión Logística reentrenada (F1 = 0.650, Recall = 0.880)."
+    )
+
     # ==========================
     # 6. CONCLUSIONES
     # ==========================
