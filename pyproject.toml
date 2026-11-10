@@ -19,6 +19,9 @@ msft-mlops = "msft_mlops.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
+notebooks = [
+    "ipykernel>=7.4.0",
+]
 validation = ["yfinance>=0.2.40"]
 
 [build-system]

@@ -7,12 +7,15 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 | ID | Decisión | Estado |
 |---|---|---|
 | D1 | Partición temporal, sin barajado | ✔ |
-| D2 | Ventanas de prueba semestrales | ◐ |
+| D2 | Ventanas de prueba semestrales | ✔ esquema ([22] p. 6, [23] p. 27); tamaño semestral = adaptación justificada |
 | D3 | Clasificador: LR, RF o ambos | ? |
 | D4 | Baselines ingenuos de referencia | ? |
 | D5 | Reentrenar si hay deriva **o** cae el F1 | ✔ |
 | D6 | Reentrenar con el último año (ventana deslizante) | ✔ ([13] p. 3, ver [evidencia-clave.md](evidencia-clave.md)) |
 | D7 | Métricas Precision, Recall y F1 | ◐ |
+| D8 | Purga de 1 día entre entrenamiento y la ventana siguiente | ✔ |
+| D9 | Hiperparámetros congelados en los reentrenamientos | ✔ (con contraejemplo) |
+| D10 | σ del F1 de referencia estimada por bootstrap | ✔ |
 
 ---
 
@@ -37,7 +40,7 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 
 ---
 
-## D2. Ventanas de prueba semestrales — ◐
+## D2. Ventanas de prueba semestrales — ✔ (esquema respaldado)
 
 **Decisión (FR-008):** ≈ 8 ventanas de ≈ 126 registros.
 
@@ -47,9 +50,18 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 - [17] Las métricas de clasificación son inestables con pocos ejemplos, y una ventana más larga
   reduce su varianza.
 
-**Brecha:** ninguna fuente revisada prescribe un tamaño de ventana para este problema. La
-elección es una solución de compromiso propia (estabilidad de la métrica frente a frecuencia de
-decisión) y se documenta como tal en la spec.
+**Respaldo directo del esquema (lectura completa, 2026-11-03):**
+- [22] p. 6: *"a training period of 750 days (approximately three years) and a trading period
+  of 250 days (approximately one year) […] 23 of these study periods with non-overlapping
+  trading periods"*. Son periodos de prueba de calendario, de longitud fija y sin solape, con
+  un reentrenamiento por periodo: el mismo esquema que nuestras ventanas.
+- [23] p. 27: *"we refit once every year as most of our signals are updated once per year"*.
+  Fijan la cadencia de reajuste al ritmo con que cambian los datos.
+
+**Por qué semestral y no anual:** con 4 años de prueba, ventanas anuales darían 4 puntos, y el
+test de Wilcoxon necesita al menos 6 pares para que un p < 0,05 sea posible. Con ventanas
+semestrales hay 8. El tamaño exacto (semestre) sigue siendo una adaptación propia del esquema
+de [22] y [23] a un periodo más corto, y se declara así.
 
 ---
 
@@ -133,5 +145,58 @@ evaluar la expansiva como sensibilidad.
 - [17] F1 ignora los verdaderos negativos y depende de qué clase se toma como positiva. En una
   tarea sube/baja, ambas clases importan.
 
-**Sugerencia:** mantener P/R/F1 como pide el diseño y **añadir MCC** como métrica
-complementaria. Es una decisión nueva que requiere tu aprobación.
+**Decisión del equipo (2026-11-03):** se mantienen P/R/F1 sin MCC. La limitación de F1 se
+declara como amenaza a la validez.
+
+---
+
+## D8. Purga de 1 día entre entrenamiento y prueba — ✔
+
+**Decisión (plan, research R5):** al reentrenar al cierre de la ventana *k* se elimina el
+último día, porque su etiqueta depende del cierre del primer día de *k+1*.
+
+**Respaldo (lectura completa):**
+- [15] p. 2: el *h-block CV*, en el que *"the h observations preceding and following the
+  observation are left out"*, porque esas observaciones pueden ser dependientes.
+- [16] p. 4: en la evaluación por bloques *"one can also introduce a gap between the training
+  and test sets"*; p. 6: el hv-blocked CV *"creates a gap between both sets"*.
+
+Nuestra purga es el caso mínimo (h = 1), suficiente porque la etiqueta mira un solo día hacia
+adelante.
+
+---
+
+## D9. Hiperparámetros congelados en los reentrenamientos — ✔ (con contraejemplo)
+
+**Decisión (plan, research R6):** los hiperparámetros se eligen una vez con 2021 y todos los
+reentrenamientos de B y C reutilizan esa configuración; solo cambian los datos.
+
+**Respaldo (lectura completa):**
+- [11] p. 4, estrategia *Detect & Retrain*: *"retrains the pipelines from scratch on the latest
+  s batches when drift is detected. The original pipeline configurations […] are kept"*. Es
+  exactamente el grupo B.
+- [11] p. 4, *Periodic Restart*: reinicia en cada lote, el equivalente al grupo C, y sirve
+  para probar *"whether a drift detector is useful"*.
+
+**Contraejemplo:** [23] p. 27 reajusta los hiperparámetros en cada reentrenamiento (desplaza
+la validación hacia adelante), y [11] p. 4 también evalúa variantes que re-optimizan
+(*Detect & Restart*). Congelar es una elección deliberada para cumplir el Principio III: si
+B y C reajustaran hiperparámetros, su ventaja no se podría atribuir solo a la política de
+reentrenamiento.
+
+---
+
+## D10. σ del F1 de referencia por bootstrap — ✔
+
+**Decisión (FR-013a, research R4):** σ se estima con 1 000 remuestras bootstrap del hold-out
+temporal.
+
+**Respaldo (lectura completa, [25] en `papers/`):**
+- [25] p. 4: para el F-score *"the common practice is to assume that they are not normally
+  distributed"*, así que no corresponde una fórmula paramétrica.
+- [25] p. 6: *"The idea of bootstrap is to use the samples as surrogate populations, for the
+  purpose of approximating the sampling distribution of the statistic."*
+- [25] p. 6, árbol de decisión: con pocos datos, *"Use bootstrap or randomization test"*.
+
+**Limitación (también de [25] p. 6):** el bootstrap *"is less effective for small test sets"*.
+Coincide con la limitación ya declarada en research R4 (hold-out de ≈ 50 días).
