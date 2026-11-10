@@ -1,0 +1,2 @@
+# Datos crudos: bytes exactos, sin conversión de fin de línea (el SHA-256 debe coincidir)
+data/raw/** -text
