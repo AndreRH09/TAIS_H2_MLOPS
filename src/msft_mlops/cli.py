@@ -1,4 +1,4 @@
-"""Línea de comandos: ``msft-mlops run | validate-data | report``."""
+"""Línea de comandos: ``msft-mlops run | validate-data | report | eval-recent``."""
 
 from __future__ import annotations
 
@@ -55,12 +55,18 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("run", help="Ejecuta el experimento completo")
     sub.add_parser("validate-data", help="Valida el CSV contra Yahoo Finance (requiere red)")
     sub.add_parser("report", help="Regenera reports/ desde results/")
+    sub.add_parser("eval-recent", help="Evalúa el tramo reciente (julio 2025 - enero 2026)")
     args = parser.parse_args(argv)
 
     try:
         if args.command == "run":
             run_experiment(args.config, args.results_dir, MlflowTracker(), args.reports_dir)
             print(f"[run] listo: {args.results_dir}/ y {args.reports_dir}/")
+        elif args.command == "eval-recent":
+            from .recent_evaluation import run_recent_evaluation
+
+            run_recent_evaluation(args.config, args.results_dir, args.reports_dir)
+            print(f"[eval-recent] listo: {args.results_dir}/ y {args.reports_dir}/")
         elif args.command == "report":
             from .report import build_reports
 
