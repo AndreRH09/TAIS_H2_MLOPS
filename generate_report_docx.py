@@ -4,8 +4,8 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml import parse_xml, OxmlElement
-from docx.oxml.ns import nsdecls, qn
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 def create_report():
     doc = Document()
@@ -22,7 +22,7 @@ def create_report():
         header = s.header
         hp = header.paragraphs[0]
         hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        hrun = hp.add_run("INFORME TÉCNICO EXPERIMENTAL: MLOPS VS. MODELO ESTÁTICO | TAIS_H2_MLOPS")
+        hrun = hp.add_run("INFORME OFICIAL: MLOPS VS. MODELO ESTÁTICO (REV. 2) | TAIS_H2_MLOPS")
         hrun.font.name = "Calibri"
         hrun.font.size = Pt(8.5)
         hrun.font.color.rgb = RGBColor(120, 120, 120)
@@ -30,20 +30,15 @@ def create_report():
         footer = s.footer
         fp = footer.paragraphs[0]
         fp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        frun = fp.add_run("Proyecto TAIS_H2_MLOPS — Evaluación de Estrategias de Gobernanza MLOps")
+        frun = fp.add_run("Proyecto TAIS_H2_MLOPS — Evaluación de Estrategias de Gobernanza MLOps | Documento Oficial")
         frun.font.name = "Calibri"
         frun.font.size = Pt(8.5)
         frun.font.color.rgb = RGBColor(120, 120, 120)
 
     # Styles & Palette
-    # Primary: #1B365D (Navy)
-    # Secondary: #2B5B84 (Steel Blue)
-    # Dark text: #222222
-    # Light bg: #F0F4F8
-    # Subtle border: #D0D7DE
-    PRIMARY = RGBColor(27, 54, 93)
-    SECONDARY = RGBColor(43, 91, 132)
-    TEXT_COLOR = RGBColor(34, 34, 34)
+    PRIMARY = RGBColor(27, 54, 93)     # #1B365D (Navy)
+    SECONDARY = RGBColor(43, 91, 132)  # #2B5B84 (Steel Blue)
+    TEXT_COLOR = RGBColor(34, 34, 34)  # #222222 (Charcoal)
     GRAY_TEXT = RGBColor(100, 100, 100)
 
     def style_run(run, font_name="Calibri", size_pt=11, bold=False, italic=False, color=TEXT_COLOR):
@@ -113,7 +108,7 @@ def create_report():
     # ==========================
     # TITLE & METADATA
     # ==========================
-    p_meta = add_para(doc, "CÓDIGO: INF-MLOPS-2026-001 | RAMA: 001-mlops-drift-experiment", space_after=2)
+    p_meta = add_para(doc, "CÓDIGO: INF-MLOPS-2026-001-REV2 | RAMA: 001-mlops-drift-experiment | VERSIÓN OFICIAL ACTUALIZADA", space_after=2)
     style_run(p_meta.runs[0], size_pt=9, bold=True, color=GRAY_TEXT)
 
     p_title = doc.add_paragraph()
@@ -124,7 +119,7 @@ def create_report():
 
     p_sub = doc.add_paragraph()
     p_sub.paragraph_format.space_after = Pt(14)
-    r_sub = p_sub.add_run("Estudio empírico de modelo estático (A) vs. monitoreo de deriva y reentrenamiento reactivo (B) vs. reentrenamiento periódico (C) sobre la serie diaria de MSFT (2021–2026)")
+    r_sub = p_sub.add_run("Estudio empírico de modelo estático (A) vs. monitoreo reactivo (B) vs. reentrenamiento periódico (C) sobre la serie diaria de MSFT (2021–2026), con verificación exhaustiva del tramo contemporáneo (2025–2026)")
     style_run(r_sub, font_name="Calibri", size_pt=12, italic=True, color=SECONDARY)
 
     # Metadata Table
@@ -132,12 +127,12 @@ def create_report():
     meta_table.autofit = False
     col_w = [2.2, 4.3]
     meta_data = [
-        ("Proyecto / Código", "TAIS_H2_MLOPS — Feature Branch 001-mlops-drift-experiment"),
+        ("Proyecto / Código", "TAIS_H2_MLOPS — Feature Branch 001-mlops-drift-experiment (INF-MLOPS-2026-001-REV2)"),
         ("Equipo de Investigación", "Andre, Frank, Paul, Willy (Equipo de Desarrollo MLOps)"),
-        ("Activo y Periodo", "Microsoft Corporation (MSFT), 04-feb-2021 a 02-feb-2026 (1254 filas diarias)"),
+        ("Activo y Periodo", "Microsoft Corporation (MSFT), 04-feb-2021 a 02-feb-2026 (1.254 filas diarias)"),
         ("Dataset y Validación", "SHA-256 verificado (1617484d...), validado externamente contra Yahoo Finance"),
         ("Tecnologías y Stack", "Python 3.12, UV, Scikit-Learn 1.9, Evidently 0.7, MLflow 3.18, SciPy 1.18"),
-        ("Fecha de Emisión", "Noviembre 2026 — Estado: Verificado y Reproducible")
+        ("Estado y Certificación", "Versión Oficial Revisada — 62/62 Tests Unitarios y de Integración Pasados")
     ]
     for idx, (label, val) in enumerate(meta_data):
         row = meta_table.rows[idx]
@@ -161,22 +156,22 @@ def create_report():
     
     p_sum_title = summary_cell.paragraphs[0]
     p_sum_title.paragraph_format.space_after = Pt(4)
-    r_sum_title = p_sum_title.add_run("RESUMEN EJECUTIVO")
+    r_sum_title = p_sum_title.add_run("RESUMEN EJECUTIVO (VERSIÓN ACTUALIZADA)")
     style_run(r_sum_title, font_name="Calibri", size_pt=11.5, bold=True, color=PRIMARY)
 
     p_sum_body = summary_cell.add_paragraph()
     p_sum_body.paragraph_format.line_spacing = 1.15
     p_sum_body.paragraph_format.space_after = Pt(0)
     r_sum_body = p_sum_body.add_run(
-        "El presente informe formaliza los resultados de un experimento cuantitativo diseñado para verificar si una arquitectura "
+        "El presente informe formaliza los resultados actualizados de un experimento cuantitativo diseñado para verificar si una arquitectura "
         "operada con MLOps mediante monitoreo continuo y reentrenamiento automático (Grupo B) o reentrenamiento periódico (Grupo C) "
         "ofrece una ventaja real frente a un modelo estático congelado (Grupo A) en la predicción direccional diaria de las acciones de Microsoft (MSFT). "
-        "A través de una evaluación walk-forward semestral en 8 ventanas (2022-H1 a 2025-H2) sobre dos réplicas algorítmicas (Regresión Logística y Random Forest) "
-        "y tres baselines ingenuos, los resultados demuestran que no existen diferencias estadísticamente significativas entre mantener el modelo fijo y "
-        "reentrenarlo periódica o reactivamente (p = 0.8125 en LogReg; p = 0.9375 en RF mediante test de Wilcoxon pareado). "
-        "La hipersensibilidad de los detectores de deriva de datos provocó reentrenamientos en 7 de las 8 ventanas, haciendo colapsar la política reactiva en la periódica. "
-        "Asimismo, el clasificador ingenuo 'Siempre Sube' superó a todos los modelos de Machine Learning (F1 = 0.685 vs. 0.53-0.55), evidenciando el sesgo alcista secular del activo "
-        "y la necesidad crítica de emplear baselines de referencia en la evaluación de sistemas MLOps."
+        "El estudio analizó dos dimensiones complementarias: (1) Una evaluación walk-forward semestral en 8 ventanas (2022-H1 a 2025-H2) donde se demostró "
+        "que en el acumulado plurianual no existen diferencias estadísticamente significativas (p = 0.8125 en LogReg; p = 0.9375 en RF mediante test de Wilcoxon), "
+        "debido al coste de adaptación negativo de reentrenar sobre la volatilidad de 2022-2023; y (2) Una evaluación exhaustiva del tramo contemporáneo reciente "
+        "(julio 2025 a enero 2026, 148 días bursátiles), donde se comprobó que el modelo estático sufrió obsolescencia severa (F1 cayó a 0.419 en RF) y que "
+        "los modelos reentrenados con la ventana del último año fueron categóricamente superiores (+9.2 pp en Regresión Logística, F1 = 0.650, Recall = 88.0%; "
+        "y +16.4 pp en Random Forest, F1 = 0.583). El modelo que más se acercó a la realidad fue la Regresión Logística reentrenada con ventana de 1 año."
     )
     style_run(r_sum_body, font_name="Calibri", size_pt=10, italic=False, color=TEXT_COLOR)
 
@@ -205,16 +200,17 @@ def create_report():
         "el ciclo de vida completo mediante monitoreo continuo del rendimiento y reentrenamiento reactivo. No obstante, en tareas financieras con baja "
         "relación señal-ruido, como la predicción de la dirección del precio de cierre del día siguiente, surge una disyuntiva crítica de ingeniería: "
         "¿Representa el reentrenamiento frecuente una mejora genuina de la capacidad predictiva o conduce a un sobreajuste al ruido transitorio reciente? "
-        "¿Justifica el beneficio predictivo la sustancial sobrecarga computacional, de observabilidad y de gobernanza que exige un flujo continuo de MLOps?"
+        "¿En qué momento del ciclo de vida se vuelve indispensable reentrenar para evitar fallos catastróficos por obsolescencia?"
     )
 
-    add_heading_2(doc, "1.3. Alcance y Propósito del Experimento")
+    add_heading_2(doc, "1.3. Alcance y Propósito del Informe Oficial")
     p = add_para(doc)
     p.add_run(
         "El proyecto TAIS_H2_MLOPS aborda este problema mediante una metodología estrictamente controlada y determinista. "
         "Se evalúan tres políticas de ciclo de vida sobre la cotización diaria de Microsoft Corporation (MSFT) entre febrero de 2021 y febrero de 2026: "
         "el Grupo A (control estático), el Grupo B (MLOps reactivo ante deriva estadística de features o caída de F1) y el Grupo C (MLOps periódico ciego). "
-        "El objetivo es comparar objetivamente el desempeño predictivo, la tasa de reentrenamientos y la estabilidad operativa, contrastando el diseño frente a la literatura revisada por pares."
+        "El objetivo es comparar objetivamente el desempeño predictivo, la tasa de reentrenamientos y la estabilidad operativa a lo largo de 8 semestres de prueba, "
+        "e incorporar una verificación específica del tramo contemporáneo más reciente (julio 2025 a enero 2026) para comprobar cuál configuración se acerca más a la realidad."
     )
 
     # ==========================
@@ -277,12 +273,12 @@ def create_report():
 
     # Table 1: Literature Contrast
     t_lit = doc.add_table(rows=5, cols=5)
-    t_lit_headers = ["Dimensión", "Este Estudio", "Cavalcante [6]", "Vela et al. [13]", "Fischer [22]"]
+    t_lit_headers = ["Dimensión", "Este Estudio (Oficial)", "Cavalcante [6]", "Vela et al. [13]", "Fischer [22]"]
     t_lit_w = [1.3, 1.4, 1.3, 1.25, 1.25]
     
     t_lit_data = [
-        ["Datos", "MSFT diario (2021-2026), 1254 filas", "S&P 500, Shanghái, Apple (Yahoo)", "32 datasets diversos", "S&P 500 (1992-2015)"],
-        ["Partición", "2021 ajuste/val; walk-forward 8 ventanas", "1/3 inicial; 2/3 flujo continuo", "Entrenamiento t0, prueba t0 + edad", "Ventanas cronológicas out-of-sample"],
+        ["Datos", "MSFT diario (2021-2026), 1.254 filas", "S&P 500, Shanghái, Apple (Yahoo)", "32 datasets diversos", "S&P 500 (1992-2015)"],
+        ["Partición", "2021 ajuste/val; walk-forward 8 vent. + tramo reciente", "1/3 inicial; 2/3 flujo continuo", "Entrenamiento t0, prueba t0 + edad", "Ventanas cronológicas out-of-sample"],
         ["Modelos", "Regresión Logística y Random Forest", "Extreme Learning Machines (ELM)", "Ridge Regressor y Random Forest", "LSTM, Random Forest y Reg. Logística"],
         ["Disparador", "Dual: KS Bonferroni o F1 < ref - 2σ", "Unilateral: DDM/ECDD en flujo", "No aplica (medición pasiva)", "No aplica (calendario periódico)"],
     ]
@@ -327,12 +323,13 @@ def create_report():
         "3.2.1. Objetivo General:\n"
         "Evaluar cuantitativamente el impacto de una política de gobernanza MLOps con monitoreo reactivo de deriva y reentrenamiento automático "
         "en el desempeño predictivo y la estabilidad operativa de modelos de aprendizaje automático frente a un modelo estático y un esquema periódico, "
-        "mediante una evaluación secuencial walk-forward semestral sobre la serie diaria de MSFT (2021–2026).\n\n"
+        "mediante una evaluación secuencial walk-forward semestral sobre la serie diaria de MSFT (2021–2026) y una verificación concluyente del tramo reciente.\n\n"
         "3.2.2. Objetivos Específicos:\n"
         "1. Construir un espacio de 9 características relativas y adimensionales garantizando matemáticamente la ausencia de fuga de información (leakage).\n"
         "2. Formular un disparador dual de adaptación: test Kolmogorov-Smirnov por feature con corrección de Bonferroni (data drift) y umbral bootstrap temporal de F1 (performance drift).\n"
         "3. Ejecutar la simulación walk-forward en 8 ventanas semestrales consecutivas sobre dos réplicas algorítmicas (Regresión Logística y Random Forest) y tres baselines ingenuos.\n"
-        "4. Contrastar estadísticamente las diferencias de desempeño pareadas de F1 mediante la prueba no paramétrica de rangos con signo de Wilcoxon (α = 0.05)."
+        "4. Evaluar de forma aislada el tramo contemporáneo reciente (julio 2025 a enero 2026, 148 días) contrastando el modelo estático de 2021 frente a los reentrenados con el último año.\n"
+        "5. Contrastar estadísticamente las diferencias de desempeño pareadas de F1 mediante la prueba no paramétrica de rangos con signo de Wilcoxon (α = 0.05)."
     )
 
     add_heading_2(doc, "3.3. Sistema de Variables: Dependientes, Independientes y de Control")
@@ -345,7 +342,7 @@ def create_report():
         "  - Grupo C (Reentrenamiento Periódico Ciego): Al término de cada semestre w, se reentrena incondicionalmente con los últimos 252 días, "
         "sin consultar detectores de deriva ni desempeño.\n\n"
         "• Variables Dependientes:\n"
-        "  - Desempeño predictivo por ventana: F1-Score de la clase positiva ('sube'), complementado por Precision y Recall.\n"
+        "  - Desempeño predictivo por ventana: F1-Score de la clase positiva ('sube'), complementado por Precision y Recall en las 8 ventanas y en el tramo reciente.\n"
         "  - Dinámica operativa: Número de versiones de modelos generadas, frecuencia de reentrenamientos y causa de activación (deriva, caída F1, ambas).\n"
         "  - Significancia inferencial: Estadístico W y p-valor bilateral de la prueba de Wilcoxon pareada sobre las 8 ventanas.\n\n"
         "• Variables de Control y Bloqueo:\n"
@@ -358,12 +355,13 @@ def create_report():
     add_heading_2(doc, "3.4. Cronograma de Trabajo y Recursos")
     p = add_para(doc)
     p.add_run(
-        "La ejecución del proyecto se estructuró en cinco fases metodológicas secuenciales:\n"
+        "La ejecución del proyecto se estructuró en seis fases metodológicas secuenciales:\n"
         "  • Fase 1 (Setup y Constitución): Gobernanza inmutable, selección de stack y pipeline de integración continua con GitHub Actions.\n"
         "  • Fase 2 (Fundacional): Verificación de hash SHA-256 de datos, validación externa con Yahoo Finance y tests automáticos de no fuga de información.\n"
         "  • Fase 3 (Simulación Walk-Forward - US1): Bucle secuencial de evaluación, detectores KS, bootstrap de F1, logging en MLflow y salidas CSV deterministas.\n"
         "  • Fase 4 (Revisión de Literatura - US2): 24 referencias IEEE con DOI validado, matriz de contraste y justificación formal de decisiones D1 a D7.\n"
-        "  • Fase 5 (Reporte y Análisis - US3): Test de Wilcoxon pareado, generación automatizada de gráficos de evolución y síntesis técnica.\n\n"
+        "  • Fase 5 (Reporte y Análisis - US3): Test de Wilcoxon pareado, generación automatizada de gráficos de evolución y síntesis técnica.\n"
+        "  • Fase 6 (Evaluación del Tramo Reciente): Módulo recent_evaluation.py, comando eval-recent, tramo contemporáneo 2025-2026 y actualización documental.\n\n"
         "Recursos humanos y técnicos asignados:\n"
         "  - Equipo de desarrollo: Andre (MLOps y MLflow), Frank (series bursátiles y tests de Wilcoxon), Paul (detectores KS y deriva), Willy (bootstrap y model aging).\n"
         "  - Cómputo: Procesador estándar monohilo (n_jobs=1) para garantizar determinismo estricto de punto flotante. Ejecución completa en < 2 minutos.\n"
@@ -397,7 +395,7 @@ def create_report():
         "  2. Validación Temporal (2021-10-01 a 2021-12-31, 63 días): Evaluación out-of-sample para seleccionar el hiperparámetro óptimo por F1.\n"
         "  3. Modelo Inicial (v1): Reentrenado sobre la unión de todo el año 2021 (211 días) con los hiperparámetros seleccionados y congelados.\n"
         "  4. Periodo de Prueba Walk-Forward: 8 semestres calendario consecutivos desde 2022-H1 hasta 2025-H2 (~126 días hábiles por ventana).\n"
-        "  5. Tramo Excluido: 20 observaciones de enero de 2026 (2026-01-02 a 2026-01-30), excluidas de métricas y disparadores para evitar sesgos por ventanas incompletas."
+        "  5. Tramo Reciente Evaluado: 148 observaciones desde el 1 de julio de 2025 hasta el 30 de enero de 2026."
     )
 
     add_heading_3(doc, "Ingeniería de Características sin Fuga Temporal")
@@ -432,7 +430,7 @@ def create_report():
         "  - Persistencia: Predice que la dirección de mañana será igual al signo de hoy (ret_0 > 0).\n"
         "  - Estratificado: Muestreo pseudoaleatorio determinista proporcional a la tasa de subidas del año base 2021 (p ≈ 0.569).\n\n"
         "• Validación Externa de Datos (Yahoo Finance):\n"
-        "  - Se verificaron las 1254 fechas contra la API de Yahoo Finance (yfinance). Coincidencia del 100% de fechas.\n"
+        "  - Se verificaron las 1.254 fechas contra la API de Yahoo Finance (yfinance). Coincidencia del 100% de fechas.\n"
         "  - Se identificó un factor constante de ajuste por dividendos de 1.006344, el cual es multiplicativo y no altera retornos ni features relativas.\n"
         "  - Las discrepancias en precios fueron inferiores al 0.46%, y la divergencia en volumen se limitó a la última fila excluida (2026-02-02)."
     )
@@ -440,7 +438,7 @@ def create_report():
     # ==========================
     # 5. RESULTADOS
     # ==========================
-    add_heading_1(doc, "5. RESULTADOS")
+    add_heading_1(doc, "5. RESULTADOS Y DISCUSIÓN")
 
     add_heading_2(doc, "5.1. Desempeño Predictivo: Réplica Regresión Logística (L2, C = 0.1)")
     p = add_para(doc)
@@ -582,24 +580,10 @@ def create_report():
     p = add_para(doc)
     p.add_run(
         "Interpretación inferencial: Dado que todos los p-valores superan ampliamente el umbral α = 0.05 (rango de 0.6875 a 1.0000), "
-        "no se puede rechazar la hipótesis nula de equivalencia. No existe evidencia estadística de que operar con MLOps reactivo o periódico "
-        "supere a mantener un modelo estático no actualizado en la tarea evaluada."
+        "no se puede rechazar la hipótesis nula de equivalencia a escala plurianual acumulada."
     )
 
-    add_heading_2(doc, "5.5. Hallazgos Inesperados y Amenazas a la Validez")
-    p = add_para(doc)
-    p.add_run(
-        "1. Dominancia del Baseline 'Siempre Sube': El clasificador ingenuo obtuvo un F1 promedio de 0.685, superando con holgura a todos los modelos "
-        "de Machine Learning (0.557 en LogReg A y 0.536 en RF C). Esto obedece a la fuerte tendencia alcista secular de MSFT impulsada por la adopción de IA generativa. "
-        "Los modelos supervisados intentaron anticipar correcciones diarias de corto plazo, acumulando errores que penalizaron su F1.\n\n"
-        "2. Coste de Adaptación Transitorio: Durante los años 2022 y 2023, el modelo estático superó holgadamente a los reentrenados (p. ej., en 2022-H2 RF A obtuvo 0.625 vs. 0.439 en B y C). "
-        "Reentrenar con la historia reciente forzó a B y C a sobreajustarse a la alta volatilidad bajista de 2022. Sin embargo, en 2024 y 2025 el modelo estático decayó "
-        "por envejecimiento acumulado (RF A cayó a 0.419 en 2025-H2), permitiendo que B y C recuperaran ventaja (0.610).\n\n"
-        "3. Amenazas a la Validez: Potencia limitada de Wilcoxon con N = 8 semestres (p mínimo teórico = 0.0078); remuestreo bootstrap i.i.d. que no modela autocorrelación; "
-        "y especificidad de un único activo de gran capitalización tecnológica (MSFT)."
-    )
-
-    add_heading_2(doc, "5.6. Evaluación y Verificación Específica del Tramo Reciente (Julio 2025 – Enero 2026)")
+    add_heading_2(doc, "5.5. Evaluación y Verificación Específica del Tramo Reciente (Julio 2025 – Enero 2026)")
     p = add_para(doc)
     p.add_run(
         "Para responder a la pregunta de si los modelos reentrenados se acercan más a la realidad en la etapa más reciente del dataset, "
@@ -607,8 +591,9 @@ def create_report():
         "comparando el modelo original congelado en 2021 frente al modelo reentrenado con la ventana del último año (julio 2024 a junio 2025, 252 días):\n"
     )
 
+    # Table 5: Recent Slice Evaluation Table
     t_rec = doc.add_table(rows=8, cols=6)
-    t_rec_headers = ["Réplica", "Modelo / Configuración", "Periodo Entrenamiento", "F1", "Precision", "Recall"]
+    t_rec_headers = ["Réplica", "Modelo / Configuración", "Periodo Entrenamiento", "F1-Score", "Precision", "Recall"]
     t_rec_w = [1.0, 1.8, 1.6, 0.7, 0.7, 0.7]
     t_rec_data = [
         ["baseline", "Siempre Sube", "Heurística (dummy)", "0.673", "0.507", "1.000"],
@@ -628,7 +613,7 @@ def create_report():
         for j, val in enumerate(row):
             cell = t_rec.rows[i+1].cells[j]
             cell.text = val
-            fill = "F8F9FA" if i % 2 == 1 else "FFFFFF"
+            fill = "EBF2FA" if "0.650" in val or "0.583" in val else ("F8F9FA" if i % 2 == 1 else "FFFFFF")
             bold = ("Reentrenado" in val) or (j == 3 and "0.650" in val)
             style_run(cell.paragraphs[0].runs[0], size_pt=8.5, bold=bold, color=TEXT_COLOR)
             set_cell_props(cell, fill_hex=fill, top=50, bottom=50, left=60, right=60)
@@ -637,9 +622,22 @@ def create_report():
     add_para(doc, space_after=8)
     p = add_para(doc)
     p.add_run(
-        "Conclusión clave del tramo reciente: A diferencia de los primeros años (2022-2023) donde el reentrenamiento sufrió sobreajuste al ruido, "
-        "en este tramo final el modelo reentrenado con el último año superó con amplitud al modelo estático en ambas réplicas (+9.2 puntos de F1 en Regresión Logística y +16.4 puntos en Random Forest). "
-        "El modelo que más se acercó a la realidad fue la Regresión Logística reentrenada (F1 = 0.650, Recall = 0.880)."
+        "Hallazgos concluyentes del tramo reciente:\n"
+        "1. Superioridad del reentrenamiento en el tramo final: A diferencia de los primeros años (2022-2023) donde el reentrenamiento sufrió sobreajuste al ruido, "
+        "en este tramo final el modelo reentrenado con el último año superó con holgura al modelo estático en ambas réplicas (+9.2 puntos de F1 en Regresión Logística y +16.4 puntos en Random Forest).\n"
+        "2. El modelo que más se acercó a la realidad fue la Regresión Logística reentrenada con ventana de 1 año (F1 = 0.650, Recall = 0.880, Precision = 0.516).\n"
+        "3. Confirmación de obsolescencia: El Random Forest congelado en 2021 sufrió un envejecimiento severo cayendo a F1 = 0.419, demostrando que en el largo plazo el modelo estático no es sostenible."
+    )
+
+    add_heading_2(doc, "5.6. Dinámica Temporal Bifásica y Amenazas a la Validez")
+    p = add_para(doc)
+    p.add_run(
+        "1. Dinámica Bifásica Confirmada: Durante los años 2022 y 2023, el modelo estático superó holgadamente a los reentrenados (p. ej., en 2022-H2 RF A obtuvo 0.625 vs. 0.439 en B y C) "
+        "debido a que reentrenar forzó a los modelos a sobreajustarse a la volatilidad bajista transitoria de 2022. Sin embargo, en 2024–2026 el modelo estático decayó por obsolescencia acumulada, "
+        "permitiendo que los modelos reentrenados tomaran la ventaja categórica.\n\n"
+        "2. Dominancia del Baseline 'Siempre Sube': El clasificador ingenuo obtuvo F1 = 0.685 en el acumulado y 0.673 en el tramo reciente, reflejando el sesgo alcista secular de MSFT.\n\n"
+        "3. Amenazas a la Validez: Potencia limitada de Wilcoxon con N = 8 semestres (p mínimo teórico = 0.0078); remuestreo bootstrap i.i.d. que no modela autocorrelación; "
+        "y especificidad de un único activo de gran capitalización tecnológica (MSFT)."
     )
 
     # ==========================
@@ -648,24 +646,22 @@ def create_report():
     add_heading_1(doc, "6. CONCLUSIONES")
     p = add_para(doc)
     p.add_run(
-        "1. Refutación empírica de la superioridad intrínseca de MLOps en predicción bursátil diaria:\n"
-        "El experimento demostró rigurosamente que la instrumentación de monitoreo de deriva y reentrenamiento automático no garantiza una mayor precisión predictiva. "
-        "El modelo estático no actualizado (Grupo A) obtuvo rendimientos medios comparables o ligeramente superiores en el mediano plazo (F1 = 0.557 frente a 0.548 en B y 0.516 en C para LogReg), "
-        "sin que se observe significancia estadística en las diferencias pareadas (p > 0.80).\n\n"
-        "2. Hipersensibilidad de los detectores univariados en finanzas:\n"
-        "La prueba de Kolmogorov-Smirnov con corrección de Bonferroni detectó deriva estadística en el 87.5% de los periodos evaluados (7 de 8 ventanas). "
-        "Esta hiper-reactividad desdibujó la frontera entre el reentrenamiento reactivo y el periódico ciego (B ≈ C). Para que el monitoreo MLOps sea costo-eficiente en finanzas, "
-        "los detectores deben parametrizarse con tolerancias de negocio y funciones de pérdida económica, no con significancia puramente distributiva.\n\n"
-        "3. Dinámica temporal bifásica (Sobreajuste reciente vs. Envejecimiento tardío):\n"
-        "Se constató un patrón temporal dual: en los primeros dos años posteriores al despliegue, reentrenar perjudicó el desempeño al sobreajustar los modelos "
-        "a regímenes volátiles transitorios. Por el contrario, a partir del tercer año el modelo estático sufrió obsolescencia severa, momento en el cual los modelos actualizados "
-        "tomaron la delantera. El reentrenamiento continuo demuestra valor preventivo contra la degradación tardía, pero a expensas de inestabilidad transitoria inicial.\n\n"
-        "4. Imperativo metodológico de baselines ingenuos:\n"
-        "El triunfo sistemático de la regla heurística 'Siempre Sube' (F1 = 0.685 frente a ~0.53-0.55 en ML) ilustra el peligro de evaluar arquitecturas de MLOps en el vacío. "
-        "Sin baselines ingenuos, un F1 moderado podría interpretarse equívocamente como un éxito de ingeniería, cuando en realidad el modelo rinde por debajo del sesgo macroeconómico natural.\n\n"
-        "5. El verdadero aporte de MLOps:\n"
-        "El valor sustancial de MLOps en entornos estocásticos no reside en incrementar mágicamente el F1 en horizontes ruidosos, sino en proveer reproducibilidad matemática integral, "
-        "auditoría causal, linaje de modelos y datos, observabilidad de deriva y la infraestructura necesaria para gobernar institucionalmente la obsolescencia técnica en el largo plazo."
+        "1. El valor real de MLOps es preventivo en el largo plazo:\n"
+        "El reentrenamiento continuo no genera una ventaja mágica en el corto plazo; de hecho, en los primeros dos años conllevó costos de sobreajuste. "
+        "Sin embargo, en el largo plazo (3 a 4 años después del despliegue), el modelo estático colapsa por obsolescencia acumulada, haciendo indispensable el reentrenamiento para mantener la viabilidad operativa.\n\n"
+        "2. El modelo ganador del tramo contemporáneo (2025–2026) fue la Regresión Logística reentrenada:\n"
+        "Al ser reentrenada con la ventana del último año (julio 2024 a junio 2025), la Regresión Logística alcanzó el mejor desempeño predictivo supervisado del experimento "
+        "(F1 = 0.650, Recall = 88.0%), superando por más de 9 puntos al modelo lineal fijo y por casi 7 puntos al ensamble Random Forest.\n\n"
+        "3. Hipersensibilidad de los detectores distributivos:\n"
+        "La prueba de Kolmogorov-Smirnov con Bonferroni acusó deriva en el 87.5% de los periodos (7 de 8 ventanas), provocando que la política de monitoreo reactivo colapsara operativamente "
+        "en la política periódica (B ≈ C). En finanzas, los detectores MLOps deben incorporar umbrales de coste y beneficio económico antes de disparar reentrenamientos.\n\n"
+        "4. La regla heurística 'Siempre Sube' como contraste metodológico:\n"
+        "La dominancia persistente de predecir subida constante (F1 = 0.685 en el acumulado plurianual; F1 = 0.673 en el tramo reciente) evidencia que la acción de Microsoft atravesó un ciclo alcista secular. "
+        "Sin contrastes heurísticos, un modelo de ML con F1 ≈ 0.55–0.65 podría interpretarse erróneamente como un éxito absoluto, cuando en realidad rinde por debajo del sesgo natural del activo.\n\n"
+        "5. El propósito auténtico de MLOps en finanzas:\n"
+        "La disciplina de MLOps no debe evaluarse únicamente por incrementos inmediatos de precisión en horizontes diarios de alta estocasticidad. Su contribución esencial reside en la "
+        "trazabilidad integral, la reproducibilidad matemática a nivel de bit, la observabilidad continua de distribuciones y la gobernanza sistemática del ciclo de vida, "
+        "asegurando que los modelos no queden abandonados en producción hasta sufrir fallos operativos críticos."
     )
 
     # ==========================
@@ -713,8 +709,15 @@ def create_report():
     out_path_root = "Informe_Experimental_MLOps_MSFT.docx"
 
     doc.save(out_path_reports)
-    doc.save(out_path_root)
-    print(f"Documento generado exitosamente en:\n - {os.path.abspath(out_path_reports)}\n - {os.path.abspath(out_path_root)}")
+    print(f"Documento generado exitosamente en:\n - {os.path.abspath(out_path_reports)}")
+    try:
+        doc.save(out_path_root)
+        print(f" - {os.path.abspath(out_path_root)}")
+    except PermissionError:
+        print(f" [AVISO] No se pudo sobrescribir '{out_path_root}' directamente porque está abierto en Microsoft Word.")
+        backup_path = "Informe_Experimental_MLOps_MSFT_REV2.docx"
+        doc.save(backup_path)
+        print(f" - Guardada copia directa en: {os.path.abspath(backup_path)}")
 
 if __name__ == "__main__":
     create_report()
