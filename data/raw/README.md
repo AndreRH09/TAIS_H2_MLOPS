@@ -23,3 +23,17 @@
 
 **Regla:** este archivo no se edita. Toda limpieza o transformación genera un archivo nuevo
 fuera de `data/raw/`. Si el hash no coincide, los resultados no son reproducibles.
+
+## Validación externa (FR-002)
+
+Ejecutada el 2026-11-05 con `uv run msft-mlops validate-data` contra Yahoo Finance (`yfinance`,
+cierre ajustado). Informe completo en [`reports/validacion_datos.md`](../../reports/validacion_datos.md).
+
+- Las 1254 fechas coinciden; no hay fechas faltantes ni sobrantes.
+- Yahoo reajusta por dividendos posteriores a la descarga: aparece un factor constante
+  (≈ 1,0063) entre el dataset y Yahoo. Es multiplicativo, no altera rendimientos ni features
+  relativas, y tras aplicarlo OHLC coincide (diferencia máx. < 0,5 %).
+- La única discrepancia material es la **última fila (2026-02-02)**: cierre +0,38 %, mínimo
+  +0,46 % y volumen −51,7 % respecto de Yahoo (parece una captura parcial del día). Esa fila cae
+  en el tramo excluido del experimento (y no tiene etiqueta), así que **no afecta a los
+  resultados**.

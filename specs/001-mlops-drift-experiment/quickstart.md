@@ -1,83 +1,56 @@
-# Quickstart: ejecutar y validar el experimento
+# Quickstart: validar el experimento de extremo a extremo
 
-Guía para que cualquier integrante (o el evaluador) reproduzca los resultados (SC-007:
-menos de 30 minutos). Los comandos están definidos en [contracts/cli.md](contracts/cli.md).
-
-## Requisitos previos
-
-- git y [uv](https://docs.astral.sh/uv/) (`powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`)
-- No hace falta instalar Python: uv instala 3.12 si falta.
-
-## 1. Preparar el entorno
+Prerrequisitos: [uv](https://docs.astral.sh/uv/) instalado; Python 3.12 (uv lo descarga si falta).
 
 ```bash
-git clone https://github.com/AndreRH09/TAIS_H2_MLOPS.git
-cd TAIS_H2_MLOPS
-git checkout 001-mlops-drift-experiment
-uv sync --all-groups
+uv sync
 ```
 
-**Esperado:** se crea `.venv/` con las versiones exactas de `uv.lock`.
-
-## 2. Verificar los tests
+## 1. Calidad y tests (CI)
 
 ```bash
 uv run ruff check .
 uv run pytest
 ```
 
-**Esperado:** todo en verde. Se validan la ausencia de fuga, los límites de las ventanas, la
-regla KS + Bonferroni, el umbral 2σ, las políticas A/B/C y la reproducibilidad.
+Esperado: lint sin errores; tests de fuga, ventanas, deriva, umbral, políticas, literatura y
+reproducibilidad en verde.
 
-## 3. Validar los datos (FR-002)
-
-```bash
-uv run python -m mlops_exp.run validate
-```
-
-**Esperado:** código 0 y `results/data_validation.md` sin discrepancias por encima de la
-tolerancia. El snapshot de Yahoo ya está versionado. Solo si falta, se ejecuta una vez
-`uv run python -m mlops_exp.run fetch-external` (requiere internet).
-
-## 4. Ejecutar el experimento
+## 2. Ejecutar el experimento (SC-001)
 
 ```bash
-uv run python -m mlops_exp.run run
-uv run python -m mlops_exp.run report
+uv run msft-mlops run
 ```
 
-**Esperado:**
-- `results/window_metrics.csv` con 96 filas y `results/comparison.csv` con 6.
-- `results/report.md` con tablas y figura.
-- En `model_versions.csv`: A con 1 versión por réplica y C con 9.
+Esperado: `results/window_metrics.csv` con 8 ventanas × (A, B, C + 3 baselines) × 2 réplicas
+(= 96 filas), `results/model_versions.csv`, `reports/resumen.md`. Salida con código 0.
 
-## 5. Explorar en MLflow
+## 3. Reproducibilidad (SC-003)
+
+```bash
+uv run msft-mlops run --results-dir results_check
+```
+
+Esperado: `results_check/*.csv` idénticos a `results/*.csv` (comparar hashes en `run_manifest.json`).
+
+## 4. Validación externa de datos (FR-002, requiere red)
+
+```bash
+uv sync --group validation
+uv run msft-mlops validate-data
+```
+
+Esperado: `reports/validacion_datos.md` con discrepancias de fechas, precio y volumen frente a Yahoo Finance.
+
+## 5. Inspeccionar el registro de runs
 
 ```bash
 uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
-Abrir http://127.0.0.1:5000, experimento `msft-drift`. Se ven los runs por réplica × grupo, el
-F1 por ventana (eje `step`), los modelos registrados `msft-{lr|rf}-{A|B|C}` con su motivo y
-los reportes de deriva de Evidently como artefactos.
+Esperado: experimento `msft-mlops` con 1 run padre por réplica y runs hijos por grupo y ventana.
 
-## 6. Comprobar la reproducibilidad (SC-003)
+## 6. Literatura (US2)
 
-```bash
-uv run python -m mlops_exp.run run --no-mlflow --out tmp/r1
-uv run python -m mlops_exp.run run --no-mlflow --out tmp/r2
-git diff --no-index --stat tmp/r1/window_metrics.csv tmp/r2/window_metrics.csv
-```
-
-**Esperado:** sin diferencias.
-
-## Escenarios de validación (aceptación de la spec)
-
-| Escenario | Dónde se comprueba |
-|---|---|
-| US1-1: métricas por ventana para A, B y C | `window_metrics.csv` (96 filas, sin vacíos salvo `NaN` justificados) |
-| US1-2/3: B reentrena solo con deriva o caída de F1, y desde la ventana siguiente | `model_versions.csv` (`reason`, `created_after_window`) + `test_trigger.py` |
-| US1-4: C reentrena siempre | `model_versions.csv` (9 versiones por réplica) |
-| US1-5: reproducibilidad | Paso 6 |
-| US2: literatura | `literature-review/` (24 fuentes, matriz, decisiones) |
-| US3: comparación | `results/report.md` y `comparison.csv` |
+Abrir [literature-review/README.md](../../literature-review/README.md). El test
+`tests/docs/test_literature.py` comprueba ≥ 20 fuentes con DOI y la matriz de contraste.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-03
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Diseño experimental: modelo estático vs. modelo operado con MLOps
 (monitoreo de deriva y reentrenamiento automático) sobre el histórico diario de MSFT

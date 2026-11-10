@@ -1,106 +1,73 @@
-# Data Model (Fase 1)
+# Modelo de datos (Phase 1)
 
-Entidades del experimento, sus campos y sus reglas de validación. Son estructuras en memoria
-(DataFrames y dataclasses) que se persisten como CSV en `results/` según
-[contracts/outputs.md](contracts/outputs.md).
+Entidades de la spec y su representación. Todas las tablas de `results/` se escriben ordenadas y
+con formato estable para que dos ejecuciones sean idénticas byte a byte.
 
-## Observación diaria
+## Observación diaria (`data/raw/MSFT_5years_cleaned.csv`)
 
-Fuente: `data/raw/MSFT_5years_cleaned.csv`.
+`date, close, high, low, open, volume, price_change, price_change_pct, day_of_week, month, year, quarter`.
+Inmutable; su SHA-256 se compara con `config/experiment.toml` al cargar.
 
-| Campo | Tipo | Regla |
-|---|---|---|
-| `date` | fecha | Única, estrictamente creciente, solo días hábiles |
-| `open`, `high`, `low`, `close` | float > 0 | `low ≤ open, close ≤ high` |
-| `volume` | int > 0 | — |
+Validaciones (`data.py`): fechas únicas y crecientes; sin nulos salvo `price_change*` de la primera
+fila; `high ≥ max(open, close)`, `low ≤ min(open, close)`, `volume > 0`; sin saltos de calendario
+anómalos (se listan huecos > 4 días).
 
-**Validaciones al cargar** (falla con error si no se cumplen):
-- SHA-256 del archivo = el valor registrado en `experiment.toml`.
-- 1 254 filas entre 2021-02-04 y 2026-02-02.
-- Sin fechas duplicadas ni nulos en OHLCV.
+## Tabla de modelado (`features.py`)
 
-Las columnas `price_change*`, `day_of_week`, `month`, `year` y `quarter` del CSV **no se
-usan** (se recalculan si hace falta, para no depender de los cálculos del notebook original).
+Índice `date`. Columnas: `ret_0, ret_1, ret_2, ret_3, ret_4, ma5_rel, ma10_rel, ma20_rel, vol_rel`
+(K = 9) y `y` (1 si `close_{t+1} > close_t`). Sin NaN: se descartan las 19 primeras filas (sin historia para SMA20) y la última.
 
-## Fila de features
+## Ventana de prueba (`windows.py`)
 
-Derivada de la observación diaria. Detalle en research.md, R2.
-
-| Campo | Tipo | Regla |
-|---|---|---|
-| `date` | fecha | — |
-| `ret_1`, `ret_2`, `ret_5`, `px_sma5`, `px_sma20`, `vol_sma20` | float | Calculados solo con filas `≤ date`; adimensionales |
-| `y` | {0, 1} | `1` si `close(date+1) > close(date)` |
-
-- Se descartan las filas sin historia suficiente (las primeras 20) y la última (sin `date+1`).
-- **Invariante de no fuga:** cambiar cualquier precio posterior a `date` no altera las
-  features de `date`. Se verifica en `test_features.py`.
-
-## Ventana de prueba
-
-| Campo | Tipo | Regla |
-|---|---|---|
-| `window_id` | str | `2022-H1` … `2025-H2` (8 ventanas) |
-| `index` | int | 0 … 7 |
-| `start`, `end` | fecha | Primer y último día hábil del semestre |
-| `n` | int | Número de filas (≈ 126) |
-
-El tramo 2026-01-01 → 2026-02-02 no es una ventana: se registra solo su tamaño (FR-007).
-
-## Versión de modelo
-
-| Campo | Tipo | Regla |
-|---|---|---|
-| `replica` | {`lr`, `rf`} | — |
-| `group` | {`A`, `B`, `C`} | — |
-| `version` | int ≥ 1 | 1 = modelo inicial |
-| `reason` | {`initial`, `drift`, `f1_drop`, `drift+f1_drop`, `scheduled`} | `A` solo `initial`; `C` solo `initial` o `scheduled` |
-| `train_start`, `train_end` | fecha | `train_end` < inicio de la primera ventana en que se usa |
-| `created_after_window` | str o null | Ventana cuyo cierre disparó la versión (null en la inicial) |
-| `f1_ref`, `sigma` | float | De un hold-out temporal (research.md, R4) |
-| `threshold` | float | `f1_ref − 2·sigma` |
-
-**Transiciones de estado por grupo** (al cierre de cada ventana *k* ≤ 6; la ventana 7 es la
-última y su reentrenamiento se registra pero no se evalúa):
-
-```text
-A: vigente(v1) ──────────────────────────────▶ vigente(v1)        (nunca cambia)
-B: vigente(vn) ── deriva o F1 < threshold ──▶ vigente(vn+1)       (si no: sigue vn)
-C: vigente(vn) ── siempre ──────────────────▶ vigente(vn+1)
-```
-
-## Evaluación de ventana
-
-Una fila por réplica × grupo (o baseline) × ventana.
-
-| Campo | Tipo | Regla |
-|---|---|---|
-| `replica`, `group`, `window_id` | — | `group` ∈ {A, B, C, always_up, persistence, stratified} |
-| `model_version` | int o null | null para baselines |
-| `precision`, `recall`, `f1` | float o `NaN` | `NaN` explícito si hay una sola clase (Edge Cases); positivo = "sube" |
-| `n` | int | Igual al `n` de la ventana |
-| `drift_detected` | bool | Para A, B y C (en A es informativo) |
-| `drift_min_p`, `drift_alpha_k` | float | `drift_alpha_k = 0,05/K` |
-| `f1_below_threshold` | bool | Solo B (informativo en A y C) |
-| `retrained_after` | bool | Si al cierre de esta ventana se creó una nueva versión |
-
-## Resultado de comparación
-
-Una fila por réplica × par (B−A, C−A, B−C).
-
-| Campo | Tipo |
+| Campo | Descripción |
 |---|---|
-| `replica`, `pair` | — |
-| `mean_diff_f1` | float |
-| `windows_won` | int (0–8) |
-| `n_effective` | int (pares no nulos) |
-| `wilcoxon_p` | float |
-| `significant` | bool (`p < 0,05`) |
+| `window_id` | `2022-H1` … `2025-H2` (8) |
+| `start`, `end` | primer y último día de negociación incluidos |
+| `n` | número de registros |
+| `complete` | siempre `True` para las 8; el tramo 2026 se reporta como `excluded_tail` con su `n` |
 
-## Relaciones
+## Versión de modelo (`results/model_versions.csv`)
+
+`replica, group, version, created_after_window, used_from_window, reason, train_start, train_end, n_train,
+holdout_start, f1_ref, sigma, holdout_f1, val_f1_hyperparam_selection, hyperparams` (el id de run de MLflow no se guarda en el CSV porque cambia en cada ejecución y rompería el determinismo)
+
+- `version` empieza en 1 (`reason = inicial`) para A, B y C.
+- A solo tiene versión 1. B y C incrementan al reentrenar.
+- `reason ∈ {inicial, deriva, caida_f1, deriva+caida_f1, periodico}`.
+- `created_after_window` = ventana cuyo cierre disparó el reentrenamiento; la versión rige desde la
+  siguiente. En la última ventana se registra con `used_in_window = null`.
+
+## Evaluación de ventana (`results/window_metrics.csv`)
+
+Una fila por `replica × group × window`, con `group ∈ {A, B, C, siempre_sube, persistencia, estratificado}`:
+
+`replica, group, window_id, n, version, precision, recall, f1, precision_undefined,
+recall_undefined, f1_undefined, n_pos_true, n_pos_pred, drift_detected, drift_min_p, drift_threshold, retrain_triggered, retrain_reason`
+
+Para los baselines `version` y las columnas de deriva quedan vacías.
+
+## Deriva por feature (`results/drift_details.csv`)
+
+`replica, group, window_id, version, feature, ks_statistic, p_value, threshold, drifted`
+
+Se registra para todos los grupos (informativo); solo B la usa como disparador.
+
+## Comparación entre grupos (`results/comparisons.csv`)
+
+`replica, comparison (B-A | C-A | B-C), n_effective, mean_diff_f1, windows_won, windows_lost,
+windows_tied, wilcoxon_statistic, p_value, significant_at_0_05`
+
+## Fuente bibliográfica (`literature-review/referencias.md`)
+
+Referencia IEEE, DOI, eje temático (A MLOps, B deriva/reentrenamiento, C evaluación temporal, D
+dirección bursátil), fila en `matriz-contraste.md`. No se modifica; se verifica con un test.
+
+## Transiciones (grupo B)
 
 ```text
-Observación diaria 1──* Fila de features *──1 Ventana de prueba
-Versión de modelo 1──* Evaluación de ventana *──1 Ventana de prueba
-Evaluación de ventana *──1 Resultado de comparación (agregadas por réplica y par)
+versión v ──(cierra ventana w, evaluada con v)──▶ ¿deriva(w, ref(v)) o F1_w < F1_ref(v) − 2σ(v)?
+   no → B conserva v
+   sí → reentrenar con 252 filas hasta w → versión v+1 (ref, F1_ref, σ nuevos) → rige en w+1
 ```
+
+Grupo C: igual, pero siempre reentrena (`reason = periodico`). Grupo A: nunca.

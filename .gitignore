@@ -16,3 +16,12 @@ tmp/
 mlruns/
 mlartifacts/
 *.db
+
+# Verificación de reproducibilidad y cachés
+results_check/
+data/external/*.csv
+.pytest_cache/
+.ruff_cache/
+
+# Office temp lock files
+~$*

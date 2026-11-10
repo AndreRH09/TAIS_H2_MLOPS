@@ -1,220 +1,143 @@
 ---
-description: "Lista de tareas para implementar el experimento A/B/C de MLOps sobre MSFT"
+
+description: "Tareas del experimento modelo estático vs. modelo operado con MLOps"
 ---
 
 # Tasks: Experimento modelo estático vs. modelo operado con MLOps
 
-**Input**: Documentos de diseño en `specs/001-mlops-drift-experiment/`
+**Input**: documentos de diseño en `/specs/001-mlops-drift-experiment/`
 
-**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md),
-[data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/cli-and-outputs.md, quickstart.md
 
-**Tests**: Incluidos. La spec y la constitución los exigen: FR-006 (verificación automática
-de fuga), SC-003 (reproducibilidad), SC-004 y Principio I (tests de leakage).
+**Tests**: se incluyen. La constitución (Principio I y II) exige tests automatizados de fuga y de
+reproducibilidad, y CI con pytest.
 
-**Organization**: Tareas agrupadas por historia de usuario. US2 (literatura) ya está casi
-completa; sus tareas hechas aparecen marcadas.
+**Organization**: por historia de usuario (US1 P1, US2 P2, US3 P3). Paquete `src/msft_mlops/`.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Se puede hacer en paralelo (archivo distinto, sin dependencias pendientes)
-- **[Story]**: Historia de usuario (US1, US2, US3)
-- Rutas relativas a la raíz del repositorio (proyecto único, layout `src/`)
+- **[P]**: paralelizable (archivos distintos, sin dependencias pendientes)
+- Todas las rutas son relativas a la raíz del repositorio
 
 ---
 
-## Phase 1: Setup (infraestructura compartida)
+## Phase 1: Setup
 
-**Purpose**: Inicializar el proyecto Python con uv, el lint, los tests y la CI.
-
-- [ ] T001 Crear `pyproject.toml` (nombre `mlops-exp`, layout `src/`, `requires-python = ">=3.12,<3.13"`) y `.python-version` con `3.12` en la raíz del repositorio
-- [ ] T002 Añadir dependencias con uv en `pyproject.toml`: principales `pandas numpy scikit-learn scipy mlflow evidently matplotlib`; grupo `validation`: `yfinance`; grupo `dev`: `pytest ruff`. Generar `uv.lock` con `uv sync --all-groups`
-- [ ] T003 [P] Configurar ruff (`line-length = 100`, reglas `E,F,I,B,UP`) y pytest (`testpaths = ["tests"]`) en `pyproject.toml`
-- [ ] T004 [P] Crear el paquete vacío `src/mlops_exp/__init__.py` y la carpeta `tests/` con `tests/conftest.py`, que expone un fixture con la ruta de `data/raw/MSFT_5years_cleaned.csv`
-- [ ] T005 [P] Crear `.github/workflows/ci.yml`: en `push` y `pull_request`, `ubuntu-latest`, `astral-sh/setup-uv`, `uv sync --all-groups`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`
-- [ ] T006 Crear `src/mlops_exp/run.py` con un CLI `argparse` y los subcomandos `fetch-external`, `validate`, `run` y `report` (sin implementar todavía, salen con código 3), opciones `--config` (por defecto `experiment.toml`), `--out` (por defecto `results/`) y `--no-mlflow`, según `specs/001-mlops-drift-experiment/contracts/cli.md`
+- [X] T001 Crear `pyproject.toml` (paquete `msft-mlops`, `requires-python = ">=3.12,<3.13"`, dependencias `scikit-learn`, `pandas<3`, `numpy`, `scipy`, `evidently`, `mlflow`, `matplotlib`; grupo `dev` con `pytest`, `ruff`; grupo `validation` con `yfinance`; entrada de script `msft-mlops = "msft_mlops.cli:main"`; config de ruff y pytest) y ejecutar `uv sync` para generar `uv.lock`
+- [X] T002 [P] Crear la estructura de directorios y `__init__.py` en `src/msft_mlops/`, `tests/unit/`, `tests/integration/`, `tests/docs/`, `config/`, `results/`, `reports/`, `data/external/` (con `.gitkeep` donde esté vacío)
+- [X] T003 [P] Crear `.github/workflows/ci.yml`: en `push`/`pull_request`, `astral-sh/setup-uv`, `uv sync`, `uv run ruff check .`, `uv run pytest`
+- [X] T004 [P] Ampliar `.gitignore` con `results_check/`, `data/external/*.csv`, `.pytest_cache/`, `.ruff_cache/`
 
 ---
 
-## Phase 2: Foundational (prerrequisitos que bloquean todas las historias)
+## Phase 2: Foundational (bloquea todas las historias)
 
-**Purpose**: Configuración, datos validados, features sin fuga, ventanas y modelos base.
+- [X] T005 Crear `config/experiment.toml` con: `[data]` ruta y `sha256 = "1617484d95f94f5968c176246decee0680c39cdb7733b503d73bda03eafe86f7"`; `[run] seed = 42`; `[split]` ajuste 2021-02-04…2021-09-30, validación 2021-10-01…2021-12-31, ventanas semestrales 2022-H1…2025-H2, cola excluida desde 2026-01-01; `[features]` lags 4, medias 5/10/20, `vol_ma = 20`; `[models.logreg]` `C=[0.01,0.1,1,10]`; `[models.rf]` `n_estimators=[100,300]`, `max_depth=[3,5,10]`, `min_samples_leaf=[5,20]`; `[drift] alpha=0.05, test="ks", correction="bonferroni"`; `[f1_trigger] k_sigma=2, holdout_rows=63, n_bootstrap=1000, resample_size=126`; `[retrain] window_rows=252`; `[validation]` tolerancias (precio 0.5 %, volumen 5 %)
+- [X] T006 Implementar `src/msft_mlops/config.py`: dataclasses tipadas + `load_config(path)` con `tomllib`; valida que `k_sigma`, `alpha`, `window_rows` existan y sean positivos
+- [X] T007 [P] Implementar `src/msft_mlops/data.py` (FR-001, FR-003): `sha256_file`, `load_raw(config)` que **falla con `DataHashMismatch` (código de salida 2)** si el hash no coincide; `validate_integrity(df)` (fechas únicas y crecientes; sin nulos salvo `price_change`/`price_change_pct` de la primera fila; `high ≥ max(open, close)`, `low ≤ min(open, close)`, `volume > 0`; lista huecos de calendario > 4 días) que lanza `DataValidationError` (código 3)
+- [X] T008 [P] Implementar `src/msft_mlops/features.py` (FR-004, FR-005, FR-006a): `build_dataset(df)` devuelve índice `date`, columnas `ret_0, ret_1, ret_2, ret_3, ret_4, ma5_rel, ma10_rel, ma20_rel, vol_rel` (K = 9) y `y = 1 si close_{t+1} > close_t`; rendimientos recalculados desde `close`; `ma_n_rel = close / SMA_n − 1`; `vol_rel = volume / SMA20(volume) − 1`; descarta las 20 primeras filas y la última, sin relleno. Constante `FEATURE_COLUMNS`
+- [X] T009 [P] Implementar `src/msft_mlops/windows.py` (FR-007, FR-008): `split_2021(ds)` → (ajuste, validación, entrenamiento_inicial); `test_windows(ds)` → lista de 8 `Window(window_id, start, end, index)` por semestre calendario; `excluded_tail(ds)` con su tamaño; función `last_year_training(ds, window)` que devuelve las últimas 252 filas **hasta la penúltima fila de la ventana** (la última fila tiene etiqueta del día siguiente a la ventana)
+- [X] T010 [P] Implementar `src/msft_mlops/metrics.py` (FR-018): `window_scores(y_true, y_pred)` con Precision/Recall/F1 de la clase "sube" (1), `zero_division=np.nan`, y banderas `precision_undefined`, `recall_undefined`, `f1_undefined`, más `n_pos_true`, `n_pos_pred`
+- [X] T011 Implementar `src/msft_mlops/models.py` (FR-009, FR-010): `make_model(replica, params, seed)` (`Pipeline(StandardScaler, LogisticRegression(max_iter=1000))` para `logreg`; `RandomForestClassifier(n_jobs=1)` para `rf`, ambos con `random_state=seed`); `select_hyperparameters(replica, fit_df, val_df, grid, seed)` elige el mejor F1 de validación (desempate: primera combinación del grid); `fit_model(replica, params, seed, X, y)`
+- [X] T012 [P] Tests unitarios fundacionales: `tests/unit/test_data.py` (hash incorrecto → `DataHashMismatch`; CSV real pasa la validación; 1254 filas), `tests/unit/test_features.py`, `tests/unit/test_windows.py` (8 ventanas, ≈ 126 filas, sin solapamiento, orden temporal, tamaño del tramo excluido ≈ 22, penúltima fila), `tests/unit/test_metrics.py` (sin positivos predichos → `precision` NaN + bandera, no 0)
+- [X] T013 Test de fuga `tests/unit/test_leakage.py` (FR-006, SC-004, Principio I): (a) para cada fecha *t* de una muestra, las features calculadas con la serie truncada en *t* son idénticas a las de la serie completa; (b) perturbar `close`/`volume` posteriores a *t* no cambia las features de *t*; (c) ninguna feature es igual a la etiqueta ni correlaciona con `y` de forma exacta; (d) `y` de *t* depende del cierre de *t+1* (comprobación del desplazamiento)
 
-**⚠️ CRITICAL**: Ninguna historia puede empezar hasta terminar esta fase.
-
-- [ ] T007 Crear `experiment.toml` en la raíz exactamente con el esquema de `specs/001-mlops-drift-experiment/contracts/config.md` (semilla 42, sha256 `1617484d95f94f5968c176246decee0680c39cdb7733b503d73bda03eafe86f7`, `expected_rows = 1254`, KS α = 0,05 + Bonferroni, `k_sigma = 2.0`, `holdout_fraction = 0.2`, `bootstrap_samples = 1000`, Wilcoxon α = 0,05) y un campo `fuente` en cada sección
-- [ ] T008 Implementar `src/mlops_exp/config.py`: carga `experiment.toml` con `tomllib`, devuelve un dataclass inmutable (`frozen=True`) y falla con `SystemExit(2)` si falta una sección, un valor o el campo `fuente`. No hay parámetros por grupo
-- [ ] T009 Implementar `src/mlops_exp/data.py`: `load_raw(cfg)` verifica el SHA-256 (si no coincide, `SystemExit(1)`) y valida las reglas de data-model.md: `date` única y estrictamente creciente; `open, high, low, close > 0`; `low ≤ open, close ≤ high`; `volume > 0`; 1 254 filas entre 2021-02-04 y 2026-02-02; sin nulos en OHLCV. Usa solo `date, open, high, low, close, volume`
-- [ ] T010 [P] Escribir `tests/test_data.py`: hash correcto pasa; un archivo con un byte alterado (en `tmp_path`) sale con código 1; las reglas OHLC detectan una fila inválida sintética
-- [ ] T011 Implementar `src/mlops_exp/features.py`: `build_features(df)` con las 6 features relativas de research.md R2 (`ret_1, ret_2, ret_5, px_sma5, px_sma20, vol_sma20`) y la etiqueta `y = 1 si close(t+1) > close(t)`. Descarta las primeras 20 filas y la última
-- [ ] T012 [P] Escribir `tests/test_features.py`: (a) invariante de no fuga: alterar todos los precios posteriores a una fecha `d` no cambia las features de `d`; (b) todas las features son adimensionales, es decir, multiplicar precios y volumen por 10 no las cambia; (c) `y` coincide con el signo de `close.shift(-1) - close`
-- [ ] T013 Implementar `src/mlops_exp/windows.py`: `test_windows()` devuelve las 8 ventanas semestrales `2022-H1 … 2025-H2` (`window_id`, `index` 0–7, `start`, `end`, `n`); `excluded_tail(df)` devuelve el tamaño del tramo 2026-01-01 → 2026-02-02; `retrain_slice(features, k)` devuelve las ventanas k−1 y k purgando el último día (`purge_days = 1`, research.md R5)
-- [ ] T014 [P] Escribir `tests/test_windows.py`: 8 ventanas sin solape ni huecos; ninguna fila de 2026 en las ventanas; el reentrenamiento tras la ventana k termina antes del primer día de k+1 y no incluye el último día de k
-- [ ] T015 Implementar `src/mlops_exp/models.py`: `make_model(replica, params, seed)` (LR = `Pipeline(StandardScaler, LogisticRegression)`; RF = `RandomForestClassifier(n_estimators=300, random_state=seed)`); `tune(replica, features, cfg)`, que entrena con feb–sep 2021, elige por F1 en oct–dic 2021 y devuelve hiperparámetros **congelados**; `baselines(seed)` con `always_up` y `stratified` (`DummyClassifier`) y `persistence` (`y_hat = ret_1 > 0`)
-- [ ] T016 Implementar `src/mlops_exp/validate_external.py` y los subcomandos `fetch-external` y `validate` en `src/mlops_exp/run.py`: `fetch-external` descarga MSFT diario **ajustado** con `yfinance` para el rango del dataset y escribe `data/external/msft_yahoo_adjusted.csv` y `.sha256`; `validate` compara fechas y cierre (tolerancia relativa 0,5 %) y escribe `results/data_validation.md` según contracts/outputs.md; sin snapshot, código 3
-- [ ] T017 Ejecutar `uv run python -m mlops_exp.run fetch-external` una vez y `validate`, revisar `results/data_validation.md` y versionar `data/external/` y el reporte. Si hay discrepancias > 0,5 %, documentarlas y resolverlas antes de seguir (FR-002)
-
-**Checkpoint**: datos verificados, features y ventanas probadas sin fuga. Pueden empezar las historias.
+**Checkpoint**: cargar datos, features, ventanas y modelos funcionan y los tests de fuga pasan.
 
 ---
 
-## Phase 3: User Story 1 — Ejecutar el experimento walk-forward A vs. B vs. C (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 — Ejecutar el experimento walk-forward A vs. B vs. C (P1) 🎯 MVP
 
-**Goal**: Con un solo comando se obtienen las métricas por ventana de A, B, C y los baselines
-en ambas réplicas, con cada versión de modelo registrada.
+**Goal**: ejecutar con un comando las dos réplicas, con A, B, C y tres baselines por ventana, y registrar versiones y runs.
 
-**Independent Test**: `uv run python -m mlops_exp.run run` produce `results/window_metrics.csv`
-con 96 filas y `results/model_versions.csv` en el que A tiene 1 versión por réplica y C tiene
-9; dos ejecuciones dan métricas idénticas.
+**Independent Test**: `uv run msft-mlops run` genera `results/window_metrics.csv` (96 filas), `results/model_versions.csv` y los runs en MLflow; dos ejecuciones producen CSV idénticos.
 
-### Tests for User Story 1
+### Tests para US1
 
-- [ ] T018 [P] [US1] Escribir `tests/test_drift.py`: datos idénticos → sin deriva; una feature desplazada 3σ → deriva; 6 features con p apenas menores a 0,05 pero mayores a 0,05/6 → **sin** deriva (verifica Bonferroni); devuelve `min_p` y `alpha_k = 0.05/K`
-- [ ] T019 [P] [US1] Escribir `tests/test_trigger.py`: `threshold = f1_ref − 2·sigma`; con la misma semilla, el bootstrap da el mismo σ; política A nunca reentrena; B reentrena si `drift` **o** `f1 < threshold`, y no en otro caso; C reentrena siempre; la nueva versión se usa desde la ventana k+1, nunca en la k
-- [ ] T020 [P] [US1] Escribir `tests/test_reproducibility.py`: ejecuta `run --no-mlflow` dos veces sobre `tmp_path/r1` y `tmp_path/r2` y compara `window_metrics.csv` byte a byte (SC-003)
+- [X] T014 [P] [US1] `tests/unit/test_drift.py` (FR-012a): con datos sintéticos, `detect_drift` coincide con `min(scipy.stats.ks_2samp p) < 0.05/K` para casos con y sin deriva; devuelve los K p-valores y la decisión
+- [X] T015 [P] [US1] `tests/unit/test_threshold.py` (FR-013a): `f1_reference_and_sigma` es determinista con la misma semilla, `sigma > 0`, y `f1_ref` cercano al F1 observado del hold-out
+- [X] T016 [P] [US1] `tests/unit/test_policies.py` (FR-011, FR-011a, FR-013): `should_retrain` de A siempre `None`; de C siempre `"periodico"`; de B `None` sin deriva y con F1 sobre el umbral, `"deriva"`, `"caida_f1"` o `"deriva+caida_f1"` según el caso
+- [X] T017 [P] [US1] `tests/unit/test_baselines.py` (FR-017): "siempre sube" predice 1; persistencia predice `ret_0 > 0`; estratificado es determinista con semilla y respeta la proporción de 2021
+- [X] T018 [US1] `tests/integration/test_walk_forward.py`: sobre un dataset sintético con cambio de régimen verifica: A conserva la versión 1; C crea una versión por ventana; una versión creada tras la ventana *w* se usa desde *w+1* y nunca en *w*; B no reentrena en una ventana sin deriva y sin caída; el reentrenamiento tras la última ventana se registra sin evaluarse; el conjunto de entrenamiento de cada versión no incluye fechas posteriores al cierre de la ventana que la disparó
+- [X] T019 [US1] `tests/integration/test_reproducibility.py` (SC-003): ejecuta `run_experiment` dos veces con la misma config y semilla en directorios distintos y comprueba que los CSV de `results/` son idénticos byte a byte
 
-### Implementation for User Story 1
+### Implementación de US1
 
-- [ ] T021 [P] [US1] Implementar `src/mlops_exp/drift.py`: `detect(ref_X, win_X, alpha)` con `scipy.stats.ks_2samp` por feature y Bonferroni (`drift = min(p) < alpha/K`). Devuelve `drift_detected`, `min_p`, `alpha_k` y los p-valores por feature (FR-012a)
-- [ ] T022 [P] [US1] Añadir a `src/mlops_exp/drift.py` `evidently_report(ref_X, win_X, path)`, que genera el HTML de deriva de Evidently solo como artefacto. No interviene en la decisión (research.md R3)
-- [ ] T023 [US1] Implementar `src/mlops_exp/trigger.py`: `reference(model_factory, train_X, train_y, cfg, seed)`, que entrena con el primer 80 % temporal, evalúa en el último 20 % y estima σ con 1 000 remuestras bootstrap del tamaño medio de ventana (research.md R4); y las políticas `policy_A`, `policy_B` y `policy_C`, con motivos `initial | drift | f1_drop | drift+f1_drop | scheduled` según data-model.md
-- [ ] T024 [US1] Implementar `src/mlops_exp/experiment.py`: para cada réplica (`lr`, `rf`), ajustar hiperparámetros (T015), entrenar el modelo inicial con todo 2021 (FR-009) y recorrer las 8 ventanas. Por ventana: predecir con la versión vigente de A, B y C; calcular precision, recall y F1 con positivo = "sube" (`NaN` explícito si hay una sola clase); evaluar deriva frente a los datos de entrenamiento de la versión vigente (FR-016); aplicar la política y, si corresponde, reentrenar con `retrain_slice` para la ventana siguiente. Incluye los 3 baselines
-- [ ] T025 [US1] Escribir en `src/mlops_exp/experiment.py` las salidas `window_metrics.csv` (96 filas) y `model_versions.csv` con exactamente las columnas de contracts/outputs.md, incluidas `seed` y `data_sha256`, en la carpeta `--out`
-- [ ] T026 [US1] Añadir el registro en MLflow en `src/mlops_exp/experiment.py` (se omite con `--no-mlflow`): tracking `sqlite:///mlflow.db`, experimento `msft-drift`, runs anidados por réplica × grupo, métricas con `step = window_index`, Model Registry `msft-{replica}-{group}` con tags `reason, train_start, train_end, f1_ref, sigma, data_sha256`, y el HTML de Evidently como artefacto (research.md R8)
-- [ ] T027 [US1] Conectar el subcomando `run` en `src/mlops_exp/run.py` con `experiment.py`
-- [ ] T028 [US1] Ejecutar `uv run python -m mlops_exp.run run`, comprobar los invariantes de contracts/outputs.md (96 filas; A con 1 versión y C con 9 por réplica; ningún `train_end` ≥ inicio de su ventana) y versionar `results/window_metrics.csv` y `results/model_versions.csv`
+- [X] T020 [P] [US1] Implementar `src/msft_mlops/drift.py` (FR-012, FR-012a, FR-016): `detect_drift(reference_df, window_df, alpha)` con Evidently (`stattest="ks"`, `stattest_threshold = alpha / K`) que devuelve `DriftResult(drifted, min_p, threshold, per_feature)`; si Evidently no expone p-valores por columna, calcula con `scipy.stats.ks_2samp` y documenta la razón en el docstring
+- [X] T021 [P] [US1] Implementar `src/msft_mlops/threshold.py` (FR-013a): `f1_reference_and_sigma(model_factory, train_df, holdout_rows, n_bootstrap, resample_size, seed)` ajusta sin el hold-out (últimas 63 filas), predice el hold-out, remuestrea con reemplazo `n_bootstrap` veces tamaño `resample_size` y devuelve `(f1_ref = media, sigma = desviación estándar)`; excluye remuestras con F1 indefinido y lo reporta
+- [X] T022 [P] [US1] Implementar `src/msft_mlops/baselines.py` (FR-017): `predict_siempre_sube`, `predict_persistencia`, `predict_estratificado(n, p_up, rng)`
+- [X] T023 [US1] Implementar `src/msft_mlops/policies.py` (FR-011, FR-011a, FR-013): clases/funciones `PolicyA`, `PolicyB`, `PolicyC` con `should_retrain(window_scores, drift_result, version) -> reason | None`; la única diferencia entre grupos vive aquí (Principio III)
+- [X] T024 [US1] Implementar `src/msft_mlops/walk_forward.py` (FR-009 a FR-016, FR-018): `run_replica(replica, ds, config, tracker)` → selecciona hiperparámetros (ajuste feb–sep, validación oct–dic), entrena la versión inicial con todo 2021 y calcula `f1_ref`/`σ` (hold-out oct–dic) para A, B y C con el mismo modelo inicial; por cada ventana evalúa los tres grupos y los baselines, calcula la deriva contra la referencia de la versión vigente, aplica la política y, si corresponde, reentrena con `last_year_training` (misma función para B y C), recalcula referencia, `f1_ref` y `σ`, y activa la versión desde la ventana siguiente. Devuelve los DataFrames de `window_metrics`, `model_versions` y `drift_details`
+- [X] T025 [P] [US1] Implementar `src/msft_mlops/tracking.py` (Principio II): `Tracker` con MLflow `sqlite:///mlflow.db`, experimento `msft-mlops`; run padre por réplica (`seed`, `data_sha256`, config), runs hijos por grupo/ventana con `precision`, `recall`, `f1`, registro de cada versión de modelo `msft-{replica}-{grupo}` con etiquetas `reason`, `train_start`, `train_end`; un `NullTracker` para tests
+- [X] T026 [US1] Implementar `src/msft_mlops/results_io.py` y `run_experiment(config_path, results_dir)` en `src/msft_mlops/cli.py`: orquesta carga → validación → features → `run_replica` para `logreg` y `rf` → escritura ordenada y estable de `results/window_metrics.csv`, `model_versions.csv`, `drift_details.csv`, `run_manifest.json` (semilla, hash de datos, versiones de librerías, hash de cada CSV); `main()` con `argparse` y subcomando `run` y códigos de salida 0/2/3
+- [X] T027 [US1] Ejecutar `uv run pytest` y `uv run msft-mlops run`; comprobar 96 filas en `window_metrics.csv` (8 × 6 grupos × 2 réplicas), sin NaN silenciosos y que las versiones de B/C coinciden con las banderas de reentrenamiento
 
-**Checkpoint**: US1 funciona y es reproducible. Este es el MVP.
-
----
-
-## Phase 4: User Story 2 — Contrastar el diseño con la literatura (Priority: P2)
-
-**Goal**: Bibliografía de ≥ 20 fuentes revisadas por pares con DOI verificado y matriz de
-contraste legible en el repositorio.
-
-**Independent Test**: abrir `literature-review/referencias.md` y verificar que cada fuente
-tiene referencia IEEE con DOI que resuelve y una fila en la matriz o una decisión asociada.
-
-- [x] T029 [US2] Bibliografía IEEE de 24 fuentes verificadas en `literature-review/referencias.md`
-- [x] T030 [US2] Decisiones D1–D7 con respaldo en `literature-review/decisiones.md`
-- [x] T031 [US2] Matriz de contraste en `literature-review/matriz-contraste.md`
-- [x] T032 [US2] Citas textuales de los 4 papers más cercanos en `literature-review/evidencia-clave.md` y guías de lectura en `literature-review/lecturas/`
-- [ ] T033 [US2] Integrar en `literature-review/matriz-contraste.md` y `literature-review/decisiones.md` los entregables de lectura de Andre, Frank, Willy y Paul, y resolver las celdas marcadas con ⚠ con la página exacta del PDF
-- [x] T034 [P] [US2] Añadir a `literature-review/decisiones.md` el respaldo de las decisiones técnicas del plan: D8 purga ([15] p. 2, [16] p. 4 y 6), D9 hiperparámetros congelados ([11] p. 4, con el contraejemplo [23] p. 27), D10 σ por bootstrap ([25] p. 4 y 6) y D2 ventanas ([22] p. 6, [23] p. 27)
-
-**Checkpoint**: US2 completa. Cada parámetro de `experiment.toml` remite a una fuente (SC-006).
+**Checkpoint**: US1 funcional y reproducible; es el MVP.
 
 ---
 
-## Phase 5: User Story 3 — Analizar y reportar la comparación (Priority: P3)
+## Phase 4: User Story 2 — Contrastar el diseño con la literatura (P2)
 
-**Goal**: Reporte comparativo con la evolución de F1, las diferencias B−A, C−A y B−C, el test
-de Wilcoxon, los reentrenamientos y las amenazas a la validez.
+**Goal**: la bibliografía y la matriz están en el repositorio y se verifican automáticamente; los datos se validan contra una fuente externa.
 
-**Independent Test**: `uv run python -m mlops_exp.run report` genera `results/comparison.csv`
-(6 filas) y `results/report.md` con la figura de F1 por ventana y la lista de reentrenamientos.
+**Independent Test**: `uv run pytest tests/docs` pasa; `validate-data` produce el informe.
 
-### Tests for User Story 3
+- [X] T028 [P] [US2] `tests/docs/test_literature.py` (FR-020, FR-021, SC-005): `literature-review/referencias.md` tiene ≥ 20 entradas, cada una con DOI o URL de fuente editorial, años 2015–2026, y cubre los ejes A, B y C; existen `matriz-contraste.md` con las dimensiones obtención de datos, partición, baseline, disparador y métricas, y `decisiones.md` con D1–D7
+- [X] T029 [P] [US2] Implementar `src/msft_mlops/external_validation.py` (FR-002): descarga con `yfinance` el cierre ajustado, apertura/máximo/mínimo y volumen de MSFT para el rango del CSV, cachea en `data/external/msft_yahoo.csv` con su SHA-256, compara fechas faltantes/sobrantes y diferencias relativas de precio y volumen contra las tolerancias de config y escribe `reports/validacion_datos.md`; código de salida 4 si superan la tolerancia
+- [X] T030 [US2] Añadir el subcomando `validate-data` a `src/msft_mlops/cli.py` y ejecutarlo (`uv sync --group validation`); si hay discrepancias, documentarlas en `reports/validacion_datos.md` y en `data/raw/README.md`; si la red o Yahoo no están disponibles, dejar constancia explícita en el informe de que **no** se pudo validar
+- [X] T031 [US2] Enlazar cada parámetro de `config/experiment.toml` con su decisión (D1–D7) en comentarios del TOML y en una sección "Trazabilidad con la literatura" de `reports/resumen.md` (SC-006)
 
-- [ ] T035 [P] [US3] Escribir `tests/test_report.py`: con un `window_metrics.csv` sintético en que B gana las 8 ventanas, `compare()` da `windows_won = 8` y un `wilcoxon_p` igual a `scipy.stats.wilcoxon` sobre las mismas diferencias; con diferencias nulas, reporta el `n_effective` correcto
-
-### Implementation for User Story 3
-
-- [ ] T036 [US3] Implementar `src/mlops_exp/report.py` `compare(window_metrics, cfg)`: para cada réplica y par (`B-A`, `C-A`, `B-C`), calcular `mean_diff_f1`, `windows_won`, `n_effective`, `wilcoxon_p` (pareado, bilateral) y `significant` (`p < 0.05`), y escribir `comparison.csv` según contracts/outputs.md (FR-019a)
-- [ ] T037 [US3] Implementar en `src/mlops_exp/report.py` la figura `results/figures/f1_by_window_{replica}.png` con matplotlib: F1 por ventana de A, B, C y baselines, con los reentrenamientos de B y C marcados y el motivo en la leyenda
-- [ ] T038 [US3] Implementar en `src/mlops_exp/report.py` la generación de `results/report.md` con el contenido listado en contracts/outputs.md: configuración y hash, tabla de F1, tabla de comparación, reentrenamientos con motivo, tramo excluido y amenazas a la validez (un activo, n = 8 y baja potencia, autocorrelación en KS, σ con hold-out pequeño, regresión vs. clasificación en [6] y [13])
-- [ ] T039 [US3] Conectar el subcomando `report` en `src/mlops_exp/run.py`, ejecutarlo y versionar `results/comparison.csv`, `results/report.md` y `results/figures/`
-
-**Checkpoint**: las tres historias funcionan de forma independiente.
+**Checkpoint**: US2 verificable de forma independiente.
 
 ---
 
-## Phase 6: Polish & cross-cutting concerns
+## Phase 5: User Story 3 — Analizar y reportar la comparación (P3)
 
-- [ ] T040 [P] Crear `README.md` en la raíz: objetivo, estructura del repositorio, enlaces a la spec, el plan, la literatura y el quickstart, atribución del dataset (CC BY 4.0) y cómo citar
-- [ ] T041 [P] Ejecutar `uv run ruff format .` y `uv run ruff check --fix .` y dejar la CI en verde en GitHub Actions
-- [ ] T042 Seguir `specs/001-mlops-drift-experiment/quickstart.md` desde un clon limpio, cronometrar (SC-007 < 30 min) y corregir cualquier paso que falle
-- [ ] T043 Verificar SC-008 con `git log -- experiment.toml`: el archivo no cambió después del commit de la primera ejecución sobre la prueba (o cada cambio tiene su justificación)
-- [ ] T044 Abrir el Pull Request de `001-mlops-drift-experiment` a `main` con el resumen de resultados (sin atribución de Claude)
+**Goal**: resumen comparativo con series de P/R/F1, diferencias, Wilcoxon y reentrenamientos.
+
+**Independent Test**: `uv run msft-mlops report` genera `reports/resumen.md` a partir de `results/` sin reejecutar.
+
+- [X] T032 [P] [US3] `tests/unit/test_report.py` (FR-019a): Wilcoxon sobre diferencias conocidas coincide con `scipy.stats.wilcoxon`; los pares con NaN se excluyen y se reporta `n_effective`; diferencias todas cero no rompen; cuenta correctamente ventanas ganadas/perdidas/empatadas
+- [X] T033 [US3] Implementar `src/msft_mlops/report.py` (FR-019, FR-019a): `compare_groups` (B−A, C−A, B−C por réplica: diferencia media, ventanas ganadas, Wilcoxon bilateral `zero_method="wilcox"`, α = 0,05) → `results/comparisons.csv`; `write_summary` → `reports/resumen.md` con tablas P/R/F1 por ventana (A, B, C, baselines) por réplica, reentrenamientos de B y C (ventana y motivo), deriva por ventana, tamaño del tramo excluido, y amenazas a la validez (un activo, n = 8 con baja potencia del Wilcoxon, bootstrap i.i.d., ajuste por dividendos, métricas bajas esperables)
+- [X] T034 [P] [US3] Generar figuras con matplotlib en `reports/f1_por_ventana_{logreg,rf}.png` (serie de F1 de A, B, C y baselines; marcas en los reentrenamientos)
+- [X] T035 [US3] Añadir el subcomando `report` a `src/msft_mlops/cli.py` e invocar la generación de reporte al final de `run`; regenerar `results/` y `reports/` y revisar que el resumen contiene la serie de F1 de los tres grupos y la lista de reentrenamientos
+
+**Checkpoint**: las tres historias funcionan.
 
 ---
 
-## Dependencies & execution order
+## Phase 6: Polish
 
-### Phase dependencies
+- [X] T036 [P] Crear `README.md` raíz en español: objetivo, estructura, `uv sync`, comandos de `quickstart.md`, enlace a la literatura y a la spec
+- [X] T037 Ejecutar la validación de `quickstart.md` completa (ruff, pytest, `run`, segunda ejecución a `results_check/` y comparación de hashes) y corregir lo que falle
+- [X] T038 Ejecutar `uv run ruff check . && uv run ruff format --check .`; corregir hallazgos
+- [X] T039 Actualizar el estado de `specs/001-mlops-drift-experiment/spec.md` a `Implemented` solo si T037 pasó y registrar en `reports/resumen.md` las limitaciones conocidas (p. ej. validación externa no realizada si no hubo red)
 
-- **Setup (Phase 1)**: sin dependencias.
-- **Foundational (Phase 2)**: depende de Setup y **bloquea** US1 y US3.
-- **US1 (Phase 3)**: depende de Foundational. Es el MVP.
-- **US2 (Phase 4)**: independiente del código. T033 depende de que el equipo entregue las
-  lecturas.
-- **US3 (Phase 5)**: necesita `window_metrics.csv` de US1 para T039. T035–T038 se pueden
-  desarrollar antes con datos sintéticos.
-- **Polish (Phase 6)**: depende de US1 y US3.
+---
 
-### Within each story
+## Dependencies & Execution Order
 
-- Los tests se escriben primero y deben fallar antes de implementar (T018–T020 antes de
-  T021–T027; T035 antes de T036).
-- `drift.py` y `trigger.py` antes de `experiment.py`; `experiment.py` antes del subcomando
-  `run`.
+- Setup (T001–T004) → Foundational (T005–T013) → US1 → US2/US3 → Polish.
+- Dentro de Foundational: T005→T006; T007, T008, T009, T010 en paralelo tras T006; T011 tras T008/T009; T012–T013 tras sus módulos.
+- US1: T014–T017 (tests) en paralelo antes de T020–T022; T023 tras T020/T021; T024 tras T020–T023 y T011; T025 en paralelo con T023; T026 tras T024/T025; T018/T019 requieren T024/T026; T027 al final.
+- US2 es independiente de US1 salvo T031, que necesita el resumen (T033).
+- US3 depende de los CSV de US1 (T026).
 
-### Orden crítico
+## Parallel Example: US1
 
 ```text
-T001 → T002 → T006 → T007 → T008 → T009 → T011 → T013 → T015 → T023 → T024 → T025 → T027 → T028 → T036 → T039
+T014 test_drift.py   T015 test_threshold.py   T016 test_policies.py   T017 test_baselines.py
+T020 drift.py        T021 threshold.py        T022 baselines.py
 ```
 
----
+## Implementation Strategy
 
-## Parallel execution examples
+1. MVP = Setup + Foundational + US1: A/B/C reproducibles y registrados.
+2. Añadir US3 (reporte) para obtener las conclusiones.
+3. US2 (verificación de literatura y validación externa) puede avanzar en paralelo.
+4. No ejecutar el experimento sobre 2022+ hasta confirmar `config/experiment.toml` (SC-008): se hace commit de la config antes de la primera ejecución completa.
 
-**Phase 1:** T003, T004 y T005 a la vez (archivos distintos).
+## Notes
 
-**Phase 2** (después de T008, T009, T011 y T013 respectivamente):
-
-```text
-T010 tests/test_data.py      ∥  T012 tests/test_features.py  ∥  T014 tests/test_windows.py
-```
-
-**US1:**
-
-```text
-T018 tests/test_drift.py  ∥  T019 tests/test_trigger.py  ∥  T020 tests/test_reproducibility.py
-T021 drift.py (KS)        ∥  T022 drift.py (Evidently)*
-```
-
-\* T021 y T022 tocan el mismo archivo: en paralelo solo si se coordinan; si no, en secuencia.
-
-**Equipo:** US2 (T033, T034) puede avanzar en paralelo a todo el código.
-
----
-
-## Implementation strategy
-
-### MVP first (US1)
-
-1. Phase 1 → Phase 2. Validar los datos (T017) **antes** de cualquier ejecución sobre la
-   prueba.
-2. Congelar `experiment.toml` con un commit (SC-008).
-3. Phase 3 (US1) → **parar y validar**: invariantes, reproducibilidad, primera mirada en MLflow.
-
-### Incremental delivery
-
-1. Setup + Foundational → base lista.
-2. US1 → métricas A/B/C (MVP).
-3. US3 → comparación y reporte.
-4. US2 → integrar las lecturas del equipo (en paralelo).
-5. Polish → README, quickstart probado, PR.
-
-### Reparto sugerido (4 integrantes)
-
-| Integrante | Tareas |
-|---|---|
-| Andre | Setup (T001–T006), config (T007–T008), MLflow (T026), PR (T044) |
-| Frank | Datos y validación externa (T009–T010, T016–T017), drift (T018, T021–T022) |
-| Willy | Features y ventanas (T011–T014), trigger (T019, T023) |
-| Paul | Modelos (T015), experimento (T024–T025, T027–T028), reporte (T035–T039) |
-
-Todos: T033 (lecturas) y revisión cruzada de PRs.
+- Commits por grupo lógico en la rama `001-mlops-drift-experiment`; `main` no recibe commits directos.
+- Los CSV de `results/` se versionan; `mlflow.db` no.

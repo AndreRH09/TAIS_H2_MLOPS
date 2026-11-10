@@ -1,79 +1,55 @@
 # Implementation Plan: Experimento modelo estático vs. modelo operado con MLOps
 
-**Branch**: `001-mlops-drift-experiment` | **Date**: 2026-11-03 | **Spec**: [spec.md](spec.md)
+**Branch**: `001-mlops-drift-experiment` | **Date**: 2026-11-05 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/001-mlops-drift-experiment/spec.md`
+**Input**: Feature specification from `/specs/001-mlops-drift-experiment/spec.md`
 
 ## Summary
 
-Simulación walk-forward sobre el histórico diario de MSFT (2021-02 → 2025-12) que compara la
-dirección del precio al día siguiente predicha por tres políticas de operación del mismo
-clasificador:
+Simulación por lotes, walk-forward semestral (8 ventanas, 2022-H1 … 2025-H2), de tres grupos
+sobre la dirección diaria de MSFT: **A** (modelo fijo), **B** (reentrena solo si hay deriva KS +
+Bonferroni o `F1 < F1_ref − 2σ`) y **C** (reentrena al cierre de cada ventana). Se ejecuta en dos
+réplicas (regresión logística y Random Forest) y se contrasta con tres baselines ingenuos.
 
-- **A:** estático.
-- **B:** reentrena cuando hay deriva de features, medida con KS + Bonferroni, o cuando F1 cae
-  por debajo de `F1_ref − 2σ`.
-- **C:** reentrena cada semestre.
-
-Se agregan tres baselines ingenuos y dos réplicas (regresión logística y Random Forest). La
-prueba son 8 ventanas semestrales (2022-H1 a 2025-H2). Cada ejecución registra modelos y
-métricas en MLflow (SQLite), y un reporte final compara los grupos con un test de Wilcoxon
-pareado.
-
-Enfoque técnico: un paquete Python pequeño con un solo punto de entrada (`run`), configuración
-inmutable en TOML, la regla de deriva calculada con `scipy` (la fuente de verdad, testeable),
-reportes visuales de Evidently como artefacto y tests que prueban la ausencia de fuga, las
-reglas de disparo y la reproducibilidad. Detalle en [research.md](research.md).
+Enfoque técnico: paquete Python `msft_mlops` gestionado con `uv`; features relativas calculadas
+solo con información pasada; bucle walk-forward en un script que decide el reentrenamiento;
+deriva con Evidently; seguimiento de runs y versiones de modelo en MLflow (SQLite local);
+resultados deterministas en CSV, resumen comparativo en Markdown con test de Wilcoxon pareado.
+La literatura (US2) ya está en `literature-review/` y solo se verifica con un test.
 
 ## Technical Context
 
-**Language/Version**: Python 3.12 (fijado en `pyproject.toml` y `.python-version`; uv lo
-gestiona)
+**Language/Version**: Python 3.12 (Evidently 0.7 no importa con pandas 3 ni con el Python 3.13 probado; se fija `pandas<3`)
 
-**Primary Dependencies**: pandas, numpy, scikit-learn, scipy, mlflow, evidently, matplotlib.
-Grupo opcional `validation`: yfinance. Grupo `dev`: pytest, ruff. Las versiones exactas
-quedan en `uv.lock`.
+**Primary Dependencies**: scikit-learn, pandas (<3), numpy, scipy, evidently, mlflow, matplotlib; `yfinance` solo en el grupo opcional `validation`
 
-**Storage**: archivos. `data/raw/` (CSV inmutable con SHA-256), `data/external/` (snapshot de
-Yahoo Finance con hash), `results/` (CSV y reportes), MLflow con backend `sqlite:///mlflow.db`
-y artefactos en `mlartifacts/` (ambos ignorados por git)
+**Storage**: CSV versionado en `data/raw/` (inmutable, SHA-256); resultados en `results/` (CSV); MLflow con SQLite local (`mlflow.db`, ignorado por git)
 
-**Testing**: pytest (unitarios + una prueba de reproducibilidad de punta a punta); ruff para
-lint y formato
+**Testing**: pytest (+ ruff para lint), ambos en GitHub Actions
 
-**Target Platform**: Windows 11 y Linux (CI en GitHub Actions `ubuntu-latest`)
+**Target Platform**: Windows/Linux, CPU, ejecución local por lotes
 
-**Project Type**: CLI y librería de experimentación (simulación por lotes)
+**Project Type**: CLI / script de investigación (single project)
 
-**Performance Goals**: el experimento completo (2 réplicas × 3 grupos × 8 ventanas + baselines
-+ bootstrap) en < 5 min en una laptop; los tests en < 2 min en CI
+**Performance Goals**: experimento completo (2 réplicas × 3 grupos × 8 ventanas) en < 5 min; reproducción completa por un evaluador en < 30 min (SC-007)
 
-**Constraints**: determinista (semillas fijas, SC-003); sin red durante el experimento (el
-snapshot de Yahoo se descarga una sola vez); umbrales fijados antes de la prueba (SC-008)
+**Constraints**: determinismo bit a bit de las métricas (semilla fija, `n_jobs=1`); sin servicios externos para ejecutar el experimento (solo la validación FR-002 usa red)
 
-**Scale/Scope**: 1 254 registros, ~6 features, 8 ventanas, ~10 versiones de modelo por réplica
-como máximo
+**Scale/Scope**: 1254 filas, 1 activo, 9 features, 2 clasificadores, 8 ventanas de ≈ 126 filas
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: pasa antes de Phase 0 y se re-evalúa tras Phase 1 (constitución v1.1.0).*
 
-| Principio | Cómo lo cumple el plan | Estado |
+| Principio | Cumplimiento en el diseño | Estado |
 |---|---|---|
-| I. Integridad temporal | Ventanas por calendario; features solo con `t` y anteriores (FR-005, FR-006a); hiperparámetros solo con 2021; **purga de 1 día** al reentrenar (la etiqueta del último día depende del cierre siguiente); tests de fuga (`test_features.py`, `test_windows.py`) | ✅ |
-| II. Reproducibilidad | `uv.lock`, semilla global en `experiment.toml`, SHA-256 del dataset verificado al cargar, todo run en MLflow; test que ejecuta dos veces y compara métricas | ✅ |
-| III. Comparabilidad | Un mismo `GroupPolicy` con el mismo modelo, hiperparámetros, features y ventanas; solo cambia la política de reentrenamiento. Umbrales en `experiment.toml` versionado antes de la primera ejecución | ✅ |
-| IV. Evidencia y simplicidad | Cada parámetro de `experiment.toml` cita su fuente de `literature-review/`; sin orquestador, feature store, serving ni base de datos con servidor | ✅ |
-| Restricciones técnicas | Python + uv, scikit-learn, Evidently, MLflow (SQLite), CSV/Parquet, script Python, GitHub Actions | ✅ Ver la nota sobre Evidently/scipy |
-| Flujo de trabajo | Rama `001-…`; CI (ruff + pytest) antes de integrar | ✅ |
+| I. Integridad temporal | Partición solo temporal; features con ventanas hacia atrás (`rolling`/`shift` positivo); escalador, hiperparámetros y referencia de deriva ajustados solo con datos previos a la ventana; reentrenamiento descarta la última fila de la ventana cuya etiqueta usa el día siguiente; test de fuga (truncar el futuro no cambia las features) | ✔ |
+| II. Reproducibilidad | `pyproject.toml` + `uv.lock`; semilla única en `config/experiment.toml`; hash del CSV verificado al cargar; cada run, versión y ventana se registra en MLflow; test que ejecuta dos veces y compara | ✔ |
+| III. Comparabilidad | A, B y C comparten pipeline, hiperparámetros, features, ventanas y métricas; solo cambia la función `should_retrain`; umbrales en `config/experiment.toml` y en la spec antes de la primera ejecución | ✔ |
+| IV. Evidencia y simplicidad | Cada parámetro enlazado a `literature-review/decisiones.md` (ver `research.md`); sin Kubernetes, Kafka, etc.; MLflow/Evidently ya exigidos por la constitución | ✔ |
+| Flujo | Rama `001-mlops-drift-experiment`; CI ruff + pytest; documentación en español | ✔ |
 
-**Nota Evidently/scipy:** la constitución asigna la detección de deriva a Evidently. La
-**decisión** (KS por feature + Bonferroni, FR-012a) se calcula con `scipy.stats.ks_2samp`,
-porque es el test exacto de [9], es determinista y se prueba sin depender de cambios de API de
-Evidently. Evidently genera el reporte de deriva de cada ventana como artefacto en MLflow. No
-es una violación, porque Evidently sigue en el stack; queda registrado en research.md (R3).
-
-**Gate inicial:** PASS.
+Sin violaciones; no se requiere *Complexity Tracking*.
 
 ## Project Structure
 
@@ -81,67 +57,55 @@ es una violación, porque Evidently sigue en el stack; queda registrado en resea
 
 ```text
 specs/001-mlops-drift-experiment/
-├── plan.md              # Este archivo
-├── research.md          # Fase 0: decisiones técnicas R1–R10
-├── data-model.md        # Fase 1: entidades y reglas de validación
-├── quickstart.md        # Fase 1: guía de ejecución y validación
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
 ├── contracts/
-│   ├── cli.md           # Comandos y códigos de salida
-│   ├── config.md        # Esquema de experiment.toml
-│   └── outputs.md       # Esquema de los CSV de resultados
-└── tasks.md             # Fase 2 (/speckit-tasks)
+│   └── cli-and-outputs.md
+├── checklists/requirements.md
+└── tasks.md             # /speckit-tasks
 ```
 
 ### Source Code (repository root)
 
 ```text
-pyproject.toml           # Dependencias, ruff, pytest
+pyproject.toml
 uv.lock
-.python-version          # 3.12
-experiment.toml          # Parámetros congelados del experimento (con citas)
+config/
+└── experiment.toml            # semilla, ventanas, umbrales, grids (se fija antes de ejecutar)
 data/
-├── raw/                 # MSFT_5years_cleaned.csv (inmutable, SHA-256)
-└── external/            # Snapshot de Yahoo Finance + hash
-src/mlops_exp/
-├── __init__.py
-├── config.py            # Carga y valida experiment.toml (tomllib)
-├── data.py              # Carga, verificación de hash y validación del dataset
-├── validate_external.py # Comparación con Yahoo Finance (FR-002)
-├── features.py          # Features relativas + etiqueta
-├── windows.py           # Ventanas semestrales, recortes de entrenamiento y purga
-├── models.py            # Pipelines LR/RF, ajuste inicial, baselines ingenuos
-├── drift.py             # KS + Bonferroni (decisión), reporte Evidently (artefacto)
-├── trigger.py           # Umbral de F1 por bootstrap y políticas A/B/C
-├── experiment.py        # Bucle walk-forward + registro en MLflow
-├── report.py            # Comparación (Wilcoxon) y figuras
-└── run.py               # CLI: validate | run | report
+├── raw/MSFT_5years_cleaned.csv   # inmutable (+ README con SHA-256)
+└── external/                  # copia cacheada de la fuente externa (FR-002)
+src/msft_mlops/
+├── config.py                  # carga y valida experiment.toml
+├── data.py                    # carga + verificación de hash + validación de integridad
+├── external_validation.py     # compara contra Yahoo Finance (cierre ajustado)
+├── features.py                # features relativas + etiqueta (FR-004/005/006a)
+├── windows.py                 # partición temporal 2021 / 8 ventanas / tramo excluido
+├── models.py                  # pipelines LR y RF, búsqueda de hiperparámetros (FR-009)
+├── drift.py                   # KS por feature + Bonferroni con Evidently (FR-012a)
+├── threshold.py               # F1 de referencia y σ por bootstrap (FR-013a)
+├── policies.py                # should_retrain para A, B, C
+├── baselines.py               # siempre sube, persistencia, estratificado
+├── metrics.py                 # P/R/F1 con indefinidos explícitos
+├── walk_forward.py            # bucle de simulación por réplica
+├── tracking.py                # MLflow: runs, versiones y registro
+├── report.py                  # resumen comparativo, Wilcoxon, gráficos
+└── cli.py                     # entradas: run, validate-data, report
 tests/
-├── test_data.py
-├── test_features.py     # Ausencia de fuga, features relativas
-├── test_windows.py      # Límites de ventanas, exclusión del tramo final, purga
-├── test_drift.py        # KS + Bonferroni con casos sintéticos
-├── test_trigger.py      # Umbral 2σ, políticas A/B/C
-└── test_reproducibility.py
-results/                 # Salidas versionables (CSV, report.md, figuras)
-.github/workflows/ci.yml # ruff + pytest
+├── unit/                      # features, fuga, ventanas, drift, umbral, métricas, políticas
+├── integration/               # walk-forward sintético y reproducibilidad (2 ejecuciones)
+└── docs/                      # estructura de la bibliografía (≥ 20 fuentes, DOI, matriz)
+results/                       # salida determinista (CSV) — se versiona
+reports/                       # resumen.md y figuras
+.github/workflows/ci.yml
 ```
 
-**Structure Decision**: proyecto único (CLI + librería) con layout `src/`. Un módulo por
-concepto del dominio. Sin subpaquetes ni capas: el experimento es una sola simulación por
-lotes.
+**Structure Decision**: proyecto único con layout `src/`. Un módulo por responsabilidad de la
+spec para que cada FR tenga un lugar claro y testeable. `results/` y `reports/` se versionan
+porque son el entregable del estudio; `mlflow.db`/`mlruns/` quedan ignorados (ya en `.gitignore`).
 
 ## Complexity Tracking
 
-Sin violaciones de la constitución que justificar.
-
-## Post-Design Constitution Re-check
-
-Revisado tras generar data-model.md, contracts/ y quickstart.md:
-- I: la purga de 1 día y los tests de fuga están en el diseño (R5, `test_windows.py`). ✅
-- II: el contrato `outputs.md` incluye semilla, hash de datos y versión de modelo en cada
-  fila. ✅
-- III: `experiment.toml` concentra todos los umbrales; el contrato `config.md` impide
-  cambiarlos por grupo. ✅
-- IV: cada parámetro del esquema `config.md` tiene un campo `fuente`. ✅
-
-**Gate final:** PASS.
+Sin violaciones que justificar.

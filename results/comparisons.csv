@@ -1,0 +1,7 @@
+replica,comparison,n_effective,mean_diff_f1,windows_won,windows_lost,windows_tied,wilcoxon_statistic,p_value,significant_at_0_05
+logreg,B-A,8,-0.009160455066009439,3,4,1,12.0,0.8125,False
+logreg,C-A,8,-0.04058733409720597,3,4,1,11.0,0.6875,False
+logreg,B-C,8,0.031426879031196536,1,0,7,0.0,1.0,False
+rf,B-A,8,0.0026237205470097877,4,3,1,13.0,0.9375,False
+rf,C-A,8,0.00452848245177169,4,3,1,13.0,0.9375,False
+rf,B-C,8,-0.0019047619047619022,0,1,7,0.0,1.0,False
