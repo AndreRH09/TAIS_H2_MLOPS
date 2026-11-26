@@ -76,6 +76,41 @@ def _metric_table(sub: pd.DataFrame, metric: str) -> str:
     return _md_table(piv, index=True).replace("| window_id |", "| ventana |")
 
 
+def data_driven_threats(wm: pd.DataFrame, drift: pd.DataFrame) -> list[str]:
+    """Amenazas a la validez cuantificadas con los resultados (D5 ⚠ y D7)."""
+    out: list[str] = []
+    b = drift[drift["group"] == "B"]
+    if len(b):
+        freq = (
+            b.assign(drifted=b["drifted"].astype(bool))
+            .groupby("feature", sort=False)["drifted"]
+            .agg(["sum", "size"])
+            .sort_values("sum", ascending=False, kind="stable")
+        )
+        top = [f"`{f}` ({int(r['sum'])}/{int(r['size'])})" for f, r in freq.iterrows() if r["sum"]]
+        out.append(
+            "- **KS con features autocorrelacionadas**: KS supone muestras independientes, pero "
+            "las features de ventana móvil están autocorrelacionadas (D5 ⚠), lo que infla la tasa "
+            "de falsas alarmas. En B, las ventanas con deriva por feature son: "
+            + (", ".join(top) if top else "ninguna")
+            + ". Si las dominan las medias móviles largas, B reentrena casi siempre y se "
+            "aproxima a C."
+        )
+    means = wm.groupby(["replica", "group"])["f1"].mean()
+    groups = means[means.index.get_level_values("group").isin(EXPERIMENTAL)]
+    up = means[means.index.get_level_values("group") == "siempre_sube"]
+    if len(groups) and len(up):
+        lo, hi, up_mean = groups.min(), groups.max(), up.mean()
+        relation = "por encima de" if up_mean > hi else "comparable o por debajo de"
+        out.append(
+            '- **F1 de la clase "sube"**: ignora los verdaderos negativos y favorece predecir '
+            f'siempre 1 (D7, [17]). El baseline "siempre sube" obtiene F1 medio {up_mean:.3f}, '
+            f"{relation} los grupos experimentales ({lo:.3f}–{hi:.3f}); una métrica simétrica "
+            "(MCC, balanced accuracy) daría otra lectura."
+        )
+    return out
+
+
 def write_summary(
     cfg: Config, ds: pd.DataFrame, wm, mv, drift, comp, tail: pd.DataFrame, path: Path
 ) -> None:
@@ -151,8 +186,10 @@ def write_summary(
         "ajustado (ver `reports/validacion_datos.md` si existe).\n"
         "- **F1 indefinido** (sin positivos predichos o reales) no dispara reentrenamiento en B y se "
         "excluye de las comparaciones pareadas.\n"
-        "- **Múltiples comparaciones**: se hacen 3 contrastes por réplica sin corrección adicional.\n"
+        "- **Múltiples comparaciones**: se hacen 3 contrastes por réplica sin corrección adicional."
     )
+    out.extend(data_driven_threats(wm, drift))
+    out.append("")
     out.append("## Trazabilidad con la literatura\n")
     out.append(
         "| Parámetro | Valor | Respaldo (`literature-review/decisiones.md`) |\n|---|---|---|\n"

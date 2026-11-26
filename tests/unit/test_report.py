@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from msft_mlops.report import compare_groups
+from msft_mlops.report import compare_groups, data_driven_threats
 
 
 def _wm(f1_a, f1_b, f1_c):
@@ -31,3 +31,30 @@ def test_nan_pairs_excluded_and_all_zero_ok():
     r = out[out["comparison"] == "B-A"].iloc[0]
     assert r["n_effective"] == 7 and r["windows_tied"] == 7
     assert np.isnan(r["p_value"]) and not r["significant_at_0_05"]
+
+
+def test_data_driven_threats_quantify_drift_and_f1_bias():
+    wm = _wm([0.5] * 8, [0.52] * 8, [0.48] * 8)
+    wm = pd.concat(
+        [
+            wm,
+            pd.DataFrame(
+                {
+                    "replica": "logreg",
+                    "group": "siempre_sube",
+                    "window_id": [f"w{i}" for i in range(8)],
+                    "f1": 0.7,
+                }
+            ),
+        ]
+    )
+    drift = pd.DataFrame(
+        {
+            "group": ["B"] * 4 + ["A"],
+            "feature": ["ma20_rel", "ma20_rel", "ret_0", "ret_0", "ret_0"],
+            "drifted": [True, True, False, False, True],
+        }
+    )
+    text = "\n".join(data_driven_threats(wm, drift))
+    assert "`ma20_rel` (2/2)" in text and "ret_0" not in text  # solo grupo B y features con deriva
+    assert "0.700" in text and "por encima de" in text and "(0.480–0.520)" in text

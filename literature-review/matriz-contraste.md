@@ -7,7 +7,7 @@ no se incluyen porque no proponen un diseño experimental propio.
 
 | Estudio | Datos | Partición temporal | Baseline / comparadores | Disparador de reentrenamiento | Métricas |
 |---|---|---|---|---|---|
-| **Este estudio** | MSFT diario 2021–2026, Kaggle validado con fuente externa | Entrenamiento y validación 2021; prueba walk-forward semestral 2022–2026 | Grupo A estático; baselines ingenuos (Q3) | Deriva de features **o** F1 < umbral | P, R, F1 (+ MCC propuesto) |
+| **Este estudio** | MSFT diario 2021–2026 (Kaggle, CC BY 4.0), validado contra Yahoo Finance | Ajuste feb–sep 2021, validación oct–dic 2021, modelo inicial con todo 2021; prueba walk-forward en 8 semestres (2022-H1 … 2025-H2); enero 2026 excluido | Grupo A estático; LR y RF como réplicas; siempre sube, persistencia y estratificado | B: deriva KS + Bonferroni **o** `F1 < F1_ref − 2σ`; C: periódico (cada semestre) | P, R, F1 (clase "sube"); Wilcoxon pareado sobre las 8 ventanas |
 | [6] Cavalcante 2015 | Series financieras | Flujo secuencial | OS-ELM sin detección | Detector explícito (DDM, ECDD) | Precisión, tiempo |
 | [9] Rabanser 2019 | Datasets con shift inducido ⚠ | — | Varios detectores | Tests de dos muestras (solo detección) | Potencia de detección |
 | [11] Celik 2021 | Flujos reales y sintéticos con deriva | Secuencial por lotes | Sin adaptación vs. 6 estrategias | Varía según la estrategia | Desempeño por lote |
@@ -26,8 +26,11 @@ no se incluyen porque no proponen un diseño experimental propio.
    temporal, igual que este diseño (D1).
 2. **Disparador combinado:** [6] usa solo detección de deriva y [13] muestra degradación sin
    deriva. Combinar ambas señales (D5) cubre los dos casos y es lo que distingue a este diseño.
+   En la ejecución, la señal de deriva disparó en casi todas las ventanas, así que B se comportó
+   como C (ver D5, resultado).
 3. **Comparadores:** los estudios bursátiles comparan contra LR y RF ([20], [22]), lo que
    respalda incluir ambos (D3). Ninguno de los resúmenes menciona baselines ingenuos explícitos
    (D4) ⚠.
 4. **Métricas:** la literatura bursátil usa AUC, precisión direccional o retornos, no F1. El
-   uso de P/R/F1 viene del curso; MCC [17] haría las métricas comparables y simétricas (D7).
+   uso de P/R/F1 viene del curso. El equipo decidió mantenerlas sin MCC y declarar la limitación
+   como amenaza (D7); MCC [17] haría las métricas comparables y simétricas.
