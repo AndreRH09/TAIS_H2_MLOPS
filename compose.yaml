@@ -1,0 +1,12 @@
+# Despliegue local con Docker:  docker compose up --build   →   http://localhost:7860
+services:
+  app:
+    build: .
+    image: msft-mlops-app
+    ports:
+      - "7860:7860"
+    environment:
+      # 1 solo en tu propio equipo, para cargar modelos .pkl/.joblib de confianza.
+      # Cargar pickle ejecuta código: nunca lo actives en un despliegue público.
+      ALLOW_UNSAFE_MODELS: "0"
+    restart: unless-stopped

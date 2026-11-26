@@ -31,13 +31,14 @@ def f1_reference_and_sigma(
     holdout_rows: int,
     n_bootstrap: int,
     resample_size: int,
+    estimator=None,
 ) -> F1Reference:
     """Ajusta con el entrenamiento sin su hold-out (últimas ``holdout_rows`` filas), predice el
     hold-out y remuestrea pares (y, ŷ) con reemplazo para estimar media y σ del F1."""
     if len(train_df) <= holdout_rows:
         raise ValueError("El entrenamiento es más corto que el hold-out")
     head, hold = train_df.iloc[:-holdout_rows], train_df.iloc[-holdout_rows:]
-    model = fit_model(replica, params, seed, head[feature_cols], head["y"])
+    model = fit_model(replica, params, seed, head[feature_cols], head["y"], estimator)
     y_true = hold["y"].to_numpy()
     y_pred = predict(model, hold[feature_cols])
     rng = np.random.default_rng(seed)

@@ -25,3 +25,6 @@ data/external/*.csv
 
 # Office temp lock files
 ~$*
+
+# Carpeta temporal del despliegue en Hugging Face (deploy/huggingface/build_bundle.py)
+space_bundle/

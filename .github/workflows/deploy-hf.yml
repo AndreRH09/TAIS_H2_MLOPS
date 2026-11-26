@@ -1,0 +1,43 @@
+# Despliegue OPCIONAL de la interfaz en Hugging Face Spaces (feature 002, FR-110).
+# Desde 2026 los Spaces Docker requieren una suscripción PRO; el despliegue gratuito del proyecto
+# es Streamlit Community Cloud (docs/DESPLIEGUE.md), que no necesita este workflow.
+# Se ejecuta cuando la CI termina en verde sobre main, o a mano desde la pestaña Actions.
+# Requiere en GitHub (Settings → Secrets and variables → Actions):
+#   - secreto  HF_TOKEN : token de Hugging Face con permiso de escritura
+#   - variable HF_SPACE : "tu-usuario/msft-mlops"
+# Mientras HF_SPACE no exista, el job se omite.
+name: Deploy (Hugging Face Spaces)
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-hf
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      vars.HF_SPACE != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: astral-sh/setup-uv@v5
+      - name: Armar el bundle del Space
+        run: python3 deploy/huggingface/build_bundle.py space_bundle
+      - name: Subir al Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: uv run --no-project --with "huggingface_hub>=0.30" python deploy/huggingface/upload.py space_bundle

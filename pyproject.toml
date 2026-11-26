@@ -12,12 +12,16 @@ dependencies = [
     "evidently>=0.7,<0.8",
     "mlflow>=3.0",
     "matplotlib>=3.9",
+    "skops>=0.10",
 ]
 
 [project.scripts]
 msft-mlops = "msft_mlops.cli:main"
 
 [dependency-groups]
+app = [
+    "streamlit>=1.40",
+]
 dev = ["pytest>=8", "ruff>=0.6"]
 notebooks = [
     "ipykernel>=7.4.0",
@@ -41,7 +45,9 @@ filterwarnings = ["ignore::SyntaxWarning", "ignore::DeprecationWarning"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
-extend-exclude = ["*.ipynb"]  # cuadernos de clase: estilo libre; el lint cubre el paquete y los tests
+# Cuadernos de clase: estilo libre. .specify/: scripts de Spec Kit de terceros (no se reformatean
+# para no divergir de upstream). El lint y el formato cubren el paquete y los tests.
+extend-exclude = ["*.ipynb", ".specify"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
