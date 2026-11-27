@@ -41,7 +41,16 @@ class ModelVersion:
 
 
 def _train_version(
-    group, number, reason, train_df, replica, params, cfg: Config, feature_cols, created_after
+    group,
+    number,
+    reason,
+    train_df,
+    replica,
+    params,
+    cfg: Config,
+    feature_cols,
+    created_after,
+    estimator=None,
 ) -> ModelVersion:
     trig = cfg["f1_trigger"]
     ref = f1_reference_and_sigma(
@@ -53,21 +62,30 @@ def _train_version(
         int(trig["holdout_rows"]),
         int(trig["n_bootstrap"]),
         int(trig["resample_size"]),
+        estimator,
     )
-    model = fit_model(replica, params, cfg.seed, train_df[feature_cols], train_df["y"])
+    model = fit_model(replica, params, cfg.seed, train_df[feature_cols], train_df["y"], estimator)
     return ModelVersion(group, number, model, reason, train_df, ref, params, created_after)
 
 
 def run_replica(
-    replica: str, ds: pd.DataFrame, cfg: Config, tracker=None
+    replica: str, ds: pd.DataFrame, cfg: Config, tracker=None, estimator=None
 ) -> dict[str, pd.DataFrame]:
+    """Ejecuta A, B, C y los baselines sobre las ventanas de prueba.
+
+    ``estimator`` (opcional) es un clasificador de scikit-learn que actúa como réplica ``replica``;
+    su rejilla de hiperparámetros es ``cfg["models"][replica]`` si existe, o ninguna.
+    """
     tracker = tracker or NullTracker()
     feature_cols = [c for c in ds.columns if c != "y"]
     split = cfg["split"]
     fit_df, val_df, initial_df = split_2021(ds, split)
     windows: list[Window] = test_windows(ds, split)
+    if not windows:
+        raise ValueError("No hay ventanas de prueba completas en el periodo de prueba")
+    grid = cfg["models"][replica] if estimator is None else cfg["models"].get(replica, {})
     params, val_f1 = select_hyperparameters(
-        replica, fit_df, val_df, cfg["models"][replica], cfg.seed, feature_cols
+        replica, fit_df, val_df, grid, cfg.seed, feature_cols, estimator
     )
     k_sigma = float(cfg["f1_trigger"]["k_sigma"])
     window_rows = int(cfg["retrain"]["window_rows"])
@@ -89,7 +107,7 @@ def run_replica(
     )
     # Mismo modelo inicial para A, B y C (Principio III): se entrena una vez con todo 2021.
     initial = _train_version(
-        "A", 1, "inicial", initial_df, replica, params, cfg, feature_cols, None
+        "A", 1, "inicial", initial_df, replica, params, cfg, feature_cols, None, estimator
     )
     current: dict[str, ModelVersion] = {}
     all_versions: list[ModelVersion] = []
@@ -159,7 +177,16 @@ def run_replica(
             if reason is not None:
                 train = last_year_training(ds, w, window_rows)
                 new_versions[g] = _train_version(
-                    g, v.number + 1, reason, train, replica, params, cfg, feature_cols, w.window_id
+                    g,
+                    v.number + 1,
+                    reason,
+                    train,
+                    replica,
+                    params,
+                    cfg,
+                    feature_cols,
+                    w.window_id,
+                    estimator,
                 )
         # Baselines: mismas métricas y ventanas.
         for b in BASELINES:

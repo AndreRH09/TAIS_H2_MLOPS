@@ -1,0 +1,6 @@
+[server]
+headless = true
+maxUploadSize = 50   # MB: suficiente para años de precios diarios o un modelo .skops
+
+[browser]
+gatherUsageStats = false

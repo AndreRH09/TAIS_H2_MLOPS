@@ -1,0 +1,15 @@
+# Dependencias de la interfaz para Streamlit Community Cloud (feature 002).
+# Streamlit Cloud busca este archivo junto al punto de entrada (app/streamlit_app.py) antes que
+# en la raíz, así que no instala el proyecto completo (MLflow, matplotlib…), que la app no usa.
+# El paquete msft_mlops se importa desde src/ (ver el inicio de streamlit_app.py).
+# Versiones fijadas igual que en uv.lock para reproducir los resultados oficiales.
+# Python: 3.12 (elegir en "Advanced settings" al desplegar; Evidently 0.7 no funciona con 3.13).
+streamlit==1.67.0
+altair==6.3.0
+scikit-learn==1.9.1
+pandas==2.3.3
+numpy==2.5.4
+scipy==1.18.1
+evidently==0.7.23
+skops==0.16.0
+joblib==1.6.0

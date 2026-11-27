@@ -8,8 +8,8 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 |---|---|---|
 | D1 | Partición temporal, sin barajado | ✔ |
 | D2 | Ventanas de prueba semestrales | ✔ esquema ([22] p. 6, [23] p. 27); tamaño semestral = adaptación justificada |
-| D3 | Clasificador: LR, RF o ambos | ? |
-| D4 | Baselines ingenuos de referencia | ? |
+| D3 | Clasificador: LR, RF o ambos | ✔ decidida: ambos, como dos réplicas (FR-010) |
+| D4 | Baselines ingenuos de referencia | ✔ decidida: siempre sube, persistencia, estratificado (FR-017) |
 | D5 | Reentrenar si hay deriva **o** cae el F1 | ✔ |
 | D6 | Reentrenar con el último año (ventana deslizante) | ✔ ([13] p. 3, ver [evidencia-clave.md](evidencia-clave.md)) |
 | D7 | Métricas Precision, Recall y F1 | ◐ |
@@ -35,8 +35,11 @@ texto completo. Los números entre corchetes remiten a [referencias.md](referenc
 - [21], [22] Los estudios de referencia en dirección bursátil evalúan fuera de muestra en orden
   temporal.
 
-**Observación:** el periodo de entrenamiento inicial (feb–sep 2021, ≈ 160 registros) es corto.
-⚠ Hay que comprobar en [21] y [22] el tamaño de sus periodos de entrenamiento para comparar.
+**Observación:** el periodo de ajuste de hiperparámetros es corto: feb–sep 2021 deja 147
+registros utilizables (2021-03-04 a 2021-09-30, tras descartar las filas sin historia para la
+SMA20), y la validación oct–dic 2021 tiene 64. El modelo inicial se entrena después con todo
+2021 (211 registros). ⚠ Hay que comprobar en [21] y [22] el tamaño de sus periodos de
+entrenamiento para comparar.
 
 ---
 
@@ -65,7 +68,7 @@ de [22] y [23] a un periodo más corto, y se declara así.
 
 ---
 
-## D3. Clasificador: LR, RF o ambos — ? (Q2 pendiente)
+## D3. Clasificador: LR, RF o ambos — ✔ (decidida: ambos)
 
 **Evidencia:**
 - [20] RF quedó primero y la LR última en dirección bursátil; los autores recomiendan incluir
@@ -76,12 +79,17 @@ de [22] y [23] a un periodo más corto, y se declara así.
   necesario.
 
 **Lectura:** la literatura usa ambos. RF suele rendir más; la LR es el benchmark mínimo.
-**Sugerencia:** opción C (ambos, como dos réplicas), que además mitiga la amenaza "un solo
-modelo".
+
+**Decisión (spec, 2026-11-03; FR-010):** opción C, ambos como dos réplicas. Dentro de cada
+réplica, A, B y C usan el mismo clasificador. Mitiga la amenaza "un solo modelo", aunque las dos
+réplicas comparten datos y no son independientes.
+
+**Resultado:** la regresión logística estática obtuvo el F1 medio más alto (0,557) y la menor
+dispersión de los grupos experimentales; RF no superó a la LR, en línea con [19].
 
 ---
 
-## D4. Baselines ingenuos — ? (Q3 pendiente)
+## D4. Baselines ingenuos — ✔ (decidida: los tres)
 
 **Evidencia:**
 - [18] Sin comparación de referencia se concluye que métodos poco competitivos sí lo son.
@@ -89,8 +97,13 @@ modelo".
   predecir. Un baseline ingenuo permite saber si A o B superan al azar.
 - [24] ⚠ Hay que verificar en el texto completo qué baselines reportan los estudios revisados.
 
-**Sugerencia:** opción B (siempre "sube", persistencia del día anterior, aleatorio
-estratificado). Su costo es mínimo y da contexto a métricas absolutas bajas.
+**Decisión (spec, 2026-11-03; FR-017):** opción B: siempre "sube", persistencia del día
+anterior y aleatorio estratificado con la proporción de subidas de 2021. Su costo es mínimo y
+da contexto a métricas absolutas bajas.
+
+**Resultado:** el baseline "siempre sube" superó a todos los grupos experimentales (F1 medio
+0,685 frente a 0,516–0,557). Sin él, un F1 ≈ 0,55 parecería aceptable; con él, queda claro que
+ningún modelo supera el sesgo alcista del activo bajo esta métrica (ver D7).
 
 ---
 
@@ -121,11 +134,22 @@ p. 6 fija α = 0,05; los tests univariados agregados rinden *"comparable"* a los
 ⚠ KS supone muestras independientes, y las features derivadas de ventanas móviles están
 autocorrelacionadas. Se declara como amenaza a la validez.
 
+**Resultado (ejecución del 2026-11-05):** la amenaza se materializó. KS detectó deriva en 7 de
+8 ventanas en cada réplica, sobre todo por `ma20_rel` (12 de 16 evaluaciones) y `ma10_rel`
+(8 de 16). El disparador de F1 solo actuó una vez (LR, tras 2025-H1, junto con la deriva). B se
+reentrenó 7 veces frente a 8 de C, y B y C empataron en 7 de 8 ventanas, así que el diseño no
+pudo separar el efecto del monitoreo del de reentrenar. La amenaza está cuantificada en
+[reports/resumen.md](../reports/resumen.md).
+
 ---
 
-## D6. Ventana de reentrenamiento: último año, deslizante — ◐
+## D6. Ventana de reentrenamiento: último año, deslizante — ✔
 
-**Decisión (FR-013):** el reentrenamiento usa los datos del último año.
+**Decisión (FR-013):** el reentrenamiento usa los datos del último año (252 filas).
+
+**Respaldo directo (lectura completa, ver [evidencia-clave.md](evidencia-clave.md)):**
+- [13] p. 3: *"we trained each model using one year of historical data (from the year ending
+  at t0)"*. Es el mismo tamaño de ventana que nuestro reentrenamiento.
 
 **Respaldo indirecto:**
 - [8] Las ventanas sobre los datos recientes son una estrategia clásica de adaptación, porque
@@ -133,9 +157,9 @@ autocorrelacionadas. Se declara como amenaza a la validez.
 - [11] Compara estrategias de adaptación (reentrenar sobre datos recientes frente a
   acumulados).
 
-**Brecha:** el tamaño de un año no está prescrito en la literatura revisada.
-⚠ Hay que confirmar en [11] si se compara una ventana deslizante con una expansiva. Conviene
-evaluar la expansiva como sensibilidad.
+**Brecha restante:** [13] usa un año, pero ninguna fuente revisada lo prescribe como óptimo.
+⚠ Hay que confirmar en [11] si se compara una ventana deslizante con una expansiva. La ventana
+expansiva como análisis de sensibilidad sigue sin evaluarse.
 
 ---
 
@@ -148,11 +172,16 @@ evaluar la expansiva como sensibilidad.
 **Decisión del equipo (2026-11-03):** se mantienen P/R/F1 sin MCC. La limitación de F1 se
 declara como amenaza a la validez.
 
+**Resultado:** la limitación pesó en las conclusiones. Con la clase "sube" como positiva,
+predecir siempre 1 obtiene recall = 1 y el F1 medio más alto (0,685, ver D4). La amenaza está
+declarada en [reports/resumen.md](../reports/resumen.md); MCC o balanced accuracy darían una
+lectura simétrica.
+
 ---
 
 ## D8. Purga de 1 día entre entrenamiento y prueba — ✔
 
-**Decisión (plan, research R5):** al reentrenar al cierre de la ventana *k* se elimina el
+**Decisión (plan, research R3):** al reentrenar al cierre de la ventana *k* se elimina el
 último día, porque su etiqueta depende del cierre del primer día de *k+1*.
 
 **Respaldo (lectura completa):**
@@ -168,7 +197,7 @@ adelante.
 
 ## D9. Hiperparámetros congelados en los reentrenamientos — ✔ (con contraejemplo)
 
-**Decisión (plan, research R6):** los hiperparámetros se eligen una vez con 2021 y todos los
+**Decisión (plan, research R4):** los hiperparámetros se eligen una vez con 2021 y todos los
 reentrenamientos de B y C reutilizan esa configuración; solo cambian los datos.
 
 **Respaldo (lectura completa):**
@@ -188,7 +217,7 @@ reentrenamiento.
 
 ## D10. σ del F1 de referencia por bootstrap — ✔
 
-**Decisión (FR-013a, research R4):** σ se estima con 1 000 remuestras bootstrap del hold-out
+**Decisión (FR-013a, research R6):** σ se estima con 1 000 remuestras bootstrap del hold-out
 temporal.
 
 **Respaldo (lectura completa, [25] en `papers/`):**
@@ -199,4 +228,5 @@ temporal.
 - [25] p. 6, árbol de decisión: con pocos datos, *"Use bootstrap or randomization test"*.
 
 **Limitación (también de [25] p. 6):** el bootstrap *"is less effective for small test sets"*.
-Coincide con la limitación ya declarada en research R4 (hold-out de ≈ 50 días).
+Coincide con la amenaza "hold-out corto" (63 filas) declarada en
+[reports/resumen.md](../reports/resumen.md).

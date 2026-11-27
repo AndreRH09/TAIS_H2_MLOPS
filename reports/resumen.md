@@ -216,6 +216,8 @@ Observación automática: en B se detectó deriva en 7 de 8 ventanas y se activ�
 - **Precios ajustados por dividendos**: la validación externa debe compararse con el cierre ajustado (ver `reports/validacion_datos.md` si existe).
 - **F1 indefinido** (sin positivos predichos o reales) no dispara reentrenamiento en B y se excluye de las comparaciones pareadas.
 - **Múltiples comparaciones**: se hacen 3 contrastes por réplica sin corrección adicional.
+- **KS con features autocorrelacionadas**: KS supone muestras independientes, pero las features de ventana móvil están autocorrelacionadas (D5 ⚠), lo que infla la tasa de falsas alarmas. En B, las ventanas con deriva por feature son: `ma20_rel` (12/16), `ma10_rel` (8/16), `ret_0` (2/16), `ret_1` (2/16), `ret_2` (2/16), `ret_3` (2/16), `ret_4` (2/16), `ma5_rel` (2/16). Si las dominan las medias móviles largas, B reentrena casi siempre y se aproxima a C.
+- **F1 de la clase "sube"**: ignora los verdaderos negativos y favorece predecir siempre 1 (D7, [17]). El baseline "siempre sube" obtiene F1 medio 0.685, por encima de los grupos experimentales (0.516–0.557); una métrica simétrica (MCC, balanced accuracy) daría otra lectura.
 
 ## Trazabilidad con la literatura
 

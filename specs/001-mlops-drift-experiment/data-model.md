@@ -35,7 +35,7 @@ holdout_start, f1_ref, sigma, holdout_f1, val_f1_hyperparam_selection, hyperpara
 - A solo tiene versión 1. B y C incrementan al reentrenar.
 - `reason ∈ {inicial, deriva, caida_f1, deriva+caida_f1, periodico}`.
 - `created_after_window` = ventana cuyo cierre disparó el reentrenamiento; la versión rige desde la
-  siguiente. En la última ventana se registra con `used_in_window = null`.
+  siguiente. En la última ventana se registra con `used_from_window` vacío.
 
 ## Evaluación de ventana (`results/window_metrics.csv`)
 
@@ -48,9 +48,17 @@ Para los baselines `version` y las columnas de deriva quedan vacías.
 
 ## Deriva por feature (`results/drift_details.csv`)
 
-`replica, group, window_id, version, feature, ks_statistic, p_value, threshold, drifted`
+`replica, group, window_id, version, feature, p_value, threshold, drifted`
 
-Se registra para todos los grupos (informativo); solo B la usa como disparador.
+Se registra para todos los grupos (informativo); solo B la usa como disparador. El estadístico
+KS no se guarda: Evidently (`ValueDrift`) solo expone el p-valor por columna.
+
+## Tramo reciente (`results/recent_slice_metrics.csv`, exploratorio)
+
+`replica, model_type, training_period, n_train, n_test, f1, precision, recall`
+
+Lo genera `msft-mlops eval-recent`. Es un análisis posterior al diseño, fuera de
+`run_manifest.json` y de SC-003 (ver `reports/evaluacion_tramo_reciente.md`).
 
 ## Comparación entre grupos (`results/comparisons.csv`)
 
